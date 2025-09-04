@@ -14,39 +14,93 @@
 
 name: Release
 on:
-  push:
-    tags:
-      - '**'
+  - push
+  - pull_request
 jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        id:
+          - "rolling"
+          - "kilted"
+          - "jazzy"
+          - "humble"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build URDF files
+        run: |
+          docker container run \
+            --rm \
+            --volume ${PWD}:/source \
+            osrf/ros:${{ matrix.id }}-desktop-full \
+            bash -c '
+              cd /source
+              colcon build
+              source install/setup.bash
+              for file in $(find urdf -name "*.xacro"); do
+                xacro "${file}" bimanual:=true > "${file%.*}_${{ matrix.id }}_bimanual.urdf"
+                xacro "${file}" bimanual:=false > "${file%.*}_${{ matrix.id }}.urdf"
+              done'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urdf-${{ matrix.id }}
+          path: urdf/**/*.urdf
   publish:
     name: Publish
+    needs: build
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: write
       discussions: write
     steps:
+      - name: Set environments
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> ${GITHUB_ENV}
+          else
+            echo "VERSION=x.y.z" >> ${GITHUB_ENV}
+          fi
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "REF=${GITHUB_SHA}" >> ${GITHUB_ENV}
+          else
+            echo "REF=${GITHUB_REF_NAME}" >> ${GITHUB_ENV}
+          fi
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: urdf-*
+          path: artifacts
+          merge-multiple: true
       - name: Create source archive
         run: |
-          git archive ${GITHUB_REF_NAME} \
-            --prefix openarm-description-${GITHUB_REF_NAME}/ \
-            --output openarm-description-${GITHUB_REF_NAME}.tar.gz
-          sha256sum \
-            openarm-description-${GITHUB_REF_NAME}.tar.gz > \
-            openarm-description-${GITHUB_REF_NAME}.tar.gz.sha256
-          sha512sum \
-            openarm-description-${GITHUB_REF_NAME}.tar.gz > \
-            openarm-description-${GITHUB_REF_NAME}.tar.gz.sha512
+          name="openarm-description-${VERSION}"
+          git archive --format=tar ${REF} \
+            --prefix "${name}/" \
+            --output "${name}.tar"
+
+          mkdir "${name}"
+          mv artifacts "${name}/urdf"
+          find "${name}/urdf" -type f | tar -rf "${name}.tar" -T -
+          gzip "${name}.tar"
+
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          sha512sum "${name}.tar.gz" > "${name}.tar.gz.sha512"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-archive
+          path: openarm-description-*.tar.gz*
       - name: Create GitHub Release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=${GITHUB_REF_NAME}
           gh release create ${GITHUB_REF_NAME} \
             --discussion-category Announcements \
             --generate-notes \
             --repo ${GITHUB_REPOSITORY} \
-            --title "OpenArm Description ${version}" \
+            --title "OpenArm Description ${VERSION}" \
             --verify-tag \
-            openarm-description-${GITHUB_REF_NAME}.tar.gz*
+            openarm-description-${VERSION}.tar.gz*
