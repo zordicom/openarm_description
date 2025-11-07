@@ -1,13 +1,13 @@
 # MuJoCo Integration - Current Status & Issues
 
-**Last Updated**: November 7, 2025  
+**Last Updated**: November 7, 2025
 **Branch**: `2025-11-mujoco-support` (openarm_description), `2025-11-control-interface` (mujoco_ros2_control)
 
 ## Executive Summary
 
-✅ **Position control is fully working and stable** - Ready for use  
-⚠️ **Velocity control is unstable** - Needs significant work or alternative approach  
-❌ **Effort control** - Not yet tested  
+✅ **Position control is fully working and stable** - Ready for use
+⚠️ **Velocity control is unstable** - Needs significant work or alternative approach
+❌ **Effort control** - Not yet tested
 ⚠️ **Library loading issue** - Requires workaround
 
 ---
@@ -15,12 +15,14 @@
 ## ✅ What's Working
 
 ### 1. Position Control (Excellent)
+
 - **Status**: Fully functional and stable
 - **Accuracy**: < 0.02 degrees error
 - **Gravity**: Works perfectly with gravity enabled
 - **Testing**: Extensively tested with trajectory following
 
 **Example Performance**:
+
 ```
 Goal:     joint1 = 1.0 rad
 Achieved: joint1 = 1.00024 rad
@@ -29,6 +31,7 @@ Status:   SUCCEEDED
 ```
 
 **Test Command**:
+
 ```bash
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
 ros2 launch openarm_description mujoco_sim.launch.py control_mode:=position
@@ -44,11 +47,13 @@ trajectory:
 ```
 
 ### 2. Controller Switching
+
 - **Status**: Working
 - **Capability**: Can switch between position/velocity/effort controllers at runtime
 - **Method**: All controllers load as `inactive`, then activate the desired one
 
 **Test Command**:
+
 ```bash
 ros2 control switch_controllers \
   --deactivate joint_trajectory_controller \
@@ -56,6 +61,7 @@ ros2 control switch_controllers \
 ```
 
 ### 3. Stable Holding with Gravity
+
 - **Status**: Working
 - **Performance**: Robot holds at zero position with < 0.1 degree error for most joints
 - **Exception**: Joint 6 has -1.4 degree sag (acceptable, due to lack of integral term)
@@ -69,6 +75,7 @@ ros2 control switch_controllers \
 **Symptom**: Robot jumps/spins wildly when velocity commands are sent, even with very small gains.
 
 **Test Results**:
+
 ```
 Command:  0.3 rad/s for 4 seconds (expected: ~1.2 rad movement)
 Actual:   0.0 → 1.04 → 2.94 rad (unstable drift)
@@ -76,6 +83,7 @@ Gains:    Kp = position_kp / 1000 (very small)
 ```
 
 **Root Cause Analysis**:
+
 1. **Gravity disturbance**: Constant torque from gravity makes velocity tracking difficult
 2. **Gain tuning paradox**:
    - Small gains (Kp/1000) → Can't generate enough torque to track velocity or fight gravity
@@ -84,23 +92,25 @@ Gains:    Kp = position_kp / 1000 (very small)
 4. **PID architecture**: Using PID to control velocity in a gravity-affected multi-DOF arm is fundamentally challenging
 
 **Attempted Solutions**:
+
 - ✗ Reduced gains from Kp/10 to Kp/100 - Still unstable
 - ✗ Reduced gains further to Kp/1000 - Better but still drifts uncontrollably
 - ✗ Tested without gravity - Crashed due to library loading issue before completion
 
 **Potential Solutions** (Not Yet Implemented):
-1. **Add integral term with anti-windup**: 
+
+1. **Add integral term with anti-windup**:
    - Use `velocity_ki` with `velocity_i_max` (like demo: `ki=10, i_max=10000`)
    - Requires careful tuning to avoid integral windup
-   
+
 2. **Use MuJoCo native velocity actuators**:
    - Instead of PID-based velocity control, use MuJoCo's built-in velocity actuators
    - Would require changes to MJCF model and `mujoco_ros2_control`
-   
+
 3. **Increase joint damping**:
    - Current: `damping="0.01"` in MJCF
    - Try: `damping="0.1"` or higher to add passive stability
-   
+
 4. **Hybrid approach**:
    - Use position control with high-frequency position updates to simulate velocity control
    - More reliable but less direct
@@ -111,9 +121,10 @@ Gains:    Kp = position_kp / 1000 (very small)
 
 ### Issue 2: Library Loading Error (MEDIUM PRIORITY)
 
-**Symptom**: 
+**Symptom**:
+
 ```
-symbol lookup error: /opt/ros/humble/lib/libvelocity_controllers.so: 
+symbol lookup error: /opt/ros/humble/lib/libvelocity_controllers.so:
 undefined symbol: _ZN20controller_interface23ControllerInterfaceBaseD2Ev
 ```
 
@@ -122,17 +133,21 @@ undefined symbol: _ZN20controller_interface23ControllerInterfaceBaseD2Ev
 **Root Cause**: `LD_LIBRARY_PATH` not set when launch file loads controllers dynamically
 
 **Current Workaround**:
+
 ```bash
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
 ```
+
 Must be set **before** launching the simulation.
 
-**Impact**: 
+**Impact**:
+
 - Simulation crashes if controllers are loaded without proper library path
 - Requires manual environment setup
 - Not user-friendly
 
 **Proper Solution** (Not Yet Implemented):
+
 1. Update launch file to set `LD_LIBRARY_PATH` in environment
 2. Or fix package configuration to properly link libraries
 3. Or update ROS2 Control package dependencies
@@ -148,6 +163,7 @@ Must be set **before** launching the simulation.
 **Impact**: Minor - acceptable for most use cases
 
 **Solution**: Add small `Ki` value with anti-windup for gravity compensation
+
 - Risk: Integral windup if not tuned carefully
 - Benefit: Zero steady-state error
 
@@ -158,6 +174,7 @@ Must be set **before** launching the simulation.
 ### PID Gains (Current Values)
 
 **Position Control** (Working):
+
 ```yaml
 Joint 1-2 (40 Nm limit):  Kp=20.0,  Kd=2.0,  Ki=0.0
 Joint 3-4 (27 Nm limit):  Kp=15.0,  Kd=1.5,  Ki=0.0
@@ -165,6 +182,7 @@ Joint 5-7 (7 Nm limit):   Kp=5.0,   Kd=0.5,  Ki=0.0
 ```
 
 **Velocity Control** (Unstable):
+
 ```yaml
 All joints: Kp = position_kp / 1000
             Kd = position_kd / 1000
@@ -174,6 +192,7 @@ All joints: Kp = position_kp / 1000
 ### Why Such Low Position Gains?
 
 Original gains (Kp=2000-3000) caused:
+
 - Torques of 12,000 Nm with 6 rad error
 - 300x over actuator limits (40 Nm)
 - Massive instability even without gravity
@@ -194,25 +213,30 @@ Current gains ensure: `Kp * max_error < actuator_limit`
 ### 1. `mujoco_ros2_control/src/mujoco_system.cpp`
 
 **Change 1**: Initialize `position_command_active = true`
+
 ```cpp
 // In register_joints():
 last_joint_state.position_command_active = true;  // Hold immediately at startup
 ```
+
 **Why**: Without this, robot falls during delay before controller sends first command.
 
 **Change 2**: Prevent control mode conflicts
+
 ```cpp
 bool apply_position = joint_state.is_position_control_enabled &&
                       (control_mode_ == "position" ||
                        (control_mode_ == "all" && joint_state.position_command_active &&
-                        !joint_state.velocity_command_active && 
+                        !joint_state.velocity_command_active &&
                         !joint_state.effort_command_active));
 ```
+
 **Why**: When `control_mode="all"`, all interfaces are enabled. This ensures only one applies at a time.
 
 ### 2. `mujoco_ros2_control/src/mujoco_ros2_control.cpp`
 
 **Change**: Fix clock synchronization
+
 ```cpp
 void MujocoRos2Control::update() {
   mj_step1(mj_model_, mj_data_);  // Step FIRST
@@ -221,11 +245,13 @@ void MujocoRos2Control::update() {
   publish_sim_time(sim_time_ros);  // Publish after stepping
 }
 ```
+
 **Why**: Prevents non-monotonic time that causes RViz resets.
 
 ### 3. `openarm_description/urdf/ros2_control/openarm.ros2_control.xacro`
 
 **Changes**:
+
 - Hardcoded `control_mode="all"` for dynamic switching
 - Use `position_pid` and `velocity_pid` command interfaces (not `position`/`velocity`)
 - Dramatically reduced PID gains
@@ -238,12 +264,14 @@ void MujocoRos2Control::update() {
 ### For Production Use
 
 **DO**:
+
 - ✅ Use position control for all motion
 - ✅ Set `export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH` before launching
 - ✅ Use trajectory following with `joint_trajectory_controller`
 - ✅ Test with gravity enabled (it works!)
 
 **DON'T**:
+
 - ❌ Use velocity control (unstable)
 - ❌ Use effort control (not tested)
 - ❌ Forget to set `LD_LIBRARY_PATH` (will crash)
@@ -251,6 +279,7 @@ void MujocoRos2Control::update() {
 ### For Future Development
 
 **High Priority**:
+
 1. Fix velocity control (try integral term + anti-windup)
 2. Fix library loading issue (proper solution, not workaround)
 
@@ -278,6 +307,7 @@ void MujocoRos2Control::update() {
 ## 🧪 Testing Checklist
 
 ### Completed ✅
+
 - [x] Position control with gravity
 - [x] Position trajectory following
 - [x] Controller switching (position ↔ velocity)
@@ -286,10 +316,12 @@ void MujocoRos2Control::update() {
 - [x] Clock synchronization (no RViz resets)
 
 ### Failed ❌
+
 - [ ] Velocity control (unstable)
 - [ ] Velocity control without gravity (crashed before completion)
 
 ### Not Tested ⏸️
+
 - [ ] Effort control
 - [ ] Bimanual control
 - [ ] Hand control
@@ -301,26 +333,31 @@ void MujocoRos2Control::update() {
 ## 🔍 Debug Commands
 
 ### Check if simulation is running
+
 ```bash
 ps aux | grep mujoco_ros2_control | grep -v grep
 ```
 
 ### Check controller status
+
 ```bash
 ros2 control list_controllers
 ```
 
 ### Monitor joint states
+
 ```bash
 ros2 topic echo /joint_states --once
 ```
 
 ### Check for errors
+
 ```bash
 ros2 topic echo /diagnostics
 ```
 
 ### View debug logs
+
 ```bash
 tail -f ~/.ros/log/latest/mujoco_ros2_control-3-stdout.log
 ```
@@ -330,12 +367,14 @@ tail -f ~/.ros/log/latest/mujoco_ros2_control-3-stdout.log
 ## 📊 Performance Metrics
 
 ### Position Control
+
 - **Accuracy**: 0.014° average error
 - **Settling time**: < 1 second
 - **Overshoot**: < 2%
 - **Stability**: Excellent (holds indefinitely)
 
 ### Velocity Control
+
 - **Accuracy**: N/A (unstable)
 - **Tracking error**: > 100% (drifts uncontrollably)
 - **Stability**: Poor (diverges)
@@ -375,6 +414,7 @@ trajectory:
 ## 📞 Support
 
 For issues or questions:
+
 1. Check `mujoco_usage.md` for usage instructions
 2. Check `mujoco_control_summary.md` for technical details
 3. Review this document for known issues
@@ -383,4 +423,3 @@ For issues or questions:
 ---
 
 **Status**: Position control ready for production use. Velocity control needs significant work before it can be used reliably.
-

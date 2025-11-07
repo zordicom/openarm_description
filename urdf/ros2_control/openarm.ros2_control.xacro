@@ -50,9 +50,9 @@
             <param name="position_kp">${kp}</param>
             <param name="position_kd">${kd}</param>
             <param name="position_ki">${ki}</param>
-            <param name="velocity_kp">${kp/100.0}</param>
-            <param name="velocity_kd">${kd/100.0}</param>
-            <param name="velocity_ki">${ki/100.0}</param>
+            <param name="velocity_kp">${kp/1000.0}</param>
+            <param name="velocity_kd">${kd/1000.0}</param>
+            <param name="velocity_ki">${ki/1000.0}</param>
           </xacro:if>
 
           <!-- Command Interfaces -->
