@@ -1,0 +1,121 @@
+# MuJoCo Simulation Parameters for OpenARM v10
+#
+# Copyright 2025 Zordi, Inc. All rights reserved.
+#
+# These parameters control the physics simulation behavior in MuJoCo.
+# Adjust these values to balance simulation accuracy and real-time performance.
+
+# Solver Settings
+solver:
+  # Integration timestep (seconds)
+  # Smaller = more accurate but slower
+  # Recommended: 0.001 - 0.002 for robotic arms
+  timestep: 0.001
+
+  # Number of solver iterations
+  # Higher = more accurate constraint satisfaction
+  # Recommended: 50-100 for precise control
+  iterations: 100
+
+  # Constraint solver tolerance
+  tolerance: 1.0e-6
+
+# Joint Damping Coefficients
+# These add viscous damping to joints for stability
+# Units: N⋅m⋅s/rad for revolute joints
+joint_damping:
+  joint1: 0.5    # Shoulder
+  joint2: 0.5    # Shoulder
+  joint3: 0.3    # Elbow
+  joint4: 0.3    # Elbow
+  joint5: 0.1    # Wrist
+  joint6: 0.1    # Wrist
+  joint7: 0.1    # Wrist/end-effector
+
+# Joint Friction (Coulomb + viscous)
+# armature: rotor inertia (kg⋅m²)
+# frictionloss: Coulomb friction torque (N⋅m)
+joint_friction:
+  joint1:
+    armature: 0.01
+    frictionloss: 0.1
+  joint2:
+    armature: 0.01
+    frictionloss: 0.1
+  joint3:
+    armature: 0.005
+    frictionloss: 0.05
+  joint4:
+    armature: 0.005
+    frictionloss: 0.05
+  joint5:
+    armature: 0.002
+    frictionloss: 0.02
+  joint6:
+    armature: 0.002
+    frictionloss: 0.02
+  joint7:
+    armature: 0.002
+    frictionloss: 0.02
+
+# Contact Parameters
+# Configure if simulating grasping or manipulation
+contact:
+  # Enable contact simulation
+  enabled: false
+
+  # Contact solver parameters
+  solref: [0.02, 1.0]      # Time constant and damping ratio
+  solimp: [0.9, 0.95, 0.001]  # Impedance parameters
+
+  # Collision margins (meters)
+  margin: 0.001
+
+  # Friction coefficients
+  friction: [1.0, 0.005, 0.0001]  # [sliding, torsional, rolling]
+
+# Gravity
+gravity:
+  x: 0.0
+  y: 0.0
+  z: -9.81
+
+# Visualization Settings (for MuJoCo viewer)
+visualization:
+  # Show joint axes
+  show_joint_axes: true
+
+  # Show center of mass
+  show_com: false
+
+  # Show contact forces
+  show_contacts: true
+
+  # Camera settings
+  camera:
+    distance: 1.5
+    azimuth: 45.0
+    elevation: -20.0
+
+# Performance Tuning
+performance:
+  # Disable unnecessary computations for speed
+  disable_actuation_dynamics: false
+
+  # Use sparse Jacobians
+  use_sparse: true
+
+  # Multithreading
+  nthread: 4
+
+# Notes:
+# - Start with these default values
+# - If simulation is unstable, try:
+#   * Reduce timestep
+#   * Increase iterations
+#   * Increase damping
+# - If simulation is too slow, try:
+#   * Increase timestep (but not above 0.002)
+#   * Reduce iterations
+#   * Enable sparse computations
+# - For system identification, you may want to reduce damping to match real hardware

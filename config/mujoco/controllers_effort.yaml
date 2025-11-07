@@ -1,0 +1,84 @@
+# Effort (Torque) Control Configuration for OpenARM with MuJoCo
+#
+# Copyright 2025 Zordi, Inc. All rights reserved.
+#
+# This configuration uses the JointGroupEffortController for direct torque control.
+# Suitable for:
+#   - Impedance control
+#   - Force control
+#   - Gravity compensation
+#   - Learning-based control
+#   - System identification
+
+controller_manager:
+  ros__parameters:
+    update_rate: 500  # Hz - MuJoCo can handle higher rates than real hardware
+
+    # Controllers to be loaded
+    effort_controller:
+      type: effort_controllers/JointGroupEffortController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+# Joint State Broadcaster
+# Publishes joint states to /joint_states topic
+joint_state_broadcaster:
+  ros__parameters: {}
+
+# Joint Group Effort Controller
+# Accepts torque commands for all joints
+effort_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Command interface
+    interface_name: effort
+
+# Usage:
+# Publish to /effort_controller/commands (std_msgs/Float64MultiArray)
+# Array order matches the joints list above
+#
+# Example with ros2 cli:
+#   ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray \
+#     "data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
+#
+# Example Python (with gravity compensation):
+#   from std_msgs.msg import Float64MultiArray
+#   import numpy as np
+#
+#   # Get gravity torques from dynamics
+#   g_torques = compute_gravity_compensation(q)
+#
+#   msg = Float64MultiArray()
+#   msg.data = g_torques.tolist()  # N⋅m
+#   effort_pub.publish(msg)
+
+# Joint effort limits (from URDF):
+# joint1: ±40 N⋅m
+# joint2: ±40 N⋅m
+# joint3: ±27 N⋅m
+# joint4: ±27 N⋅m
+# joint5: ±7 N⋅m
+# joint6: ±7 N⋅m
+# joint7: ±7 N⋅m
+
+# For bimanual configuration with hand, uncomment and add:
+# effort_controller:
+#   ros__parameters:
+#     joints:
+#       - openarm_joint1
+#       - openarm_joint2
+#       - openarm_joint3
+#       - openarm_joint4
+#       - openarm_joint5
+#       - openarm_joint6
+#       - openarm_joint7
+#       - openarm_finger_joint1  # Add hand joint

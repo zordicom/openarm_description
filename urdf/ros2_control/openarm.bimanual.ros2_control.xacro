@@ -6,6 +6,7 @@
              left_can_interface:=^|can1
              right_can_interface:=^|can0
              use_fake_hardware:=^|false
+             use_mujoco:=^|false
              fake_sensor_commands:=^|false
              hand:=^|false
              left_arm_prefix:=^|left_
@@ -16,25 +17,56 @@
     <ros2_control name="openarm_left_hardware_interface" type="system">
         <hardware>
           <param name="arm_type">${arm_type}</param>
-          <xacro:if value="${use_fake_hardware}">
+
+          <!-- MuJoCo Physics Simulation -->
+          <xacro:if value="${use_mujoco}">
+            <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+            <!-- Always use "all" mode to enable dynamic controller switching -->
+            <param name="control_mode">all</param>
+          </xacro:if>
+
+          <!-- Fake Hardware (Mock Interface) -->
+          <xacro:if value="${use_fake_hardware and not use_mujoco}">
             <plugin>fake_components/GenericSystem</plugin>
             <param name="fake_sensor_commands">${fake_sensor_commands}</param>
             <param name="state_following_offset">0.0</param>
           </xacro:if>
-          <xacro:unless value="${use_fake_hardware}">
+
+          <!-- Real Hardware (CAN Bus) -->
+          <xacro:if value="${not use_fake_hardware and not use_mujoco}">
             <plugin>openarm_hardware/OpenArm_v10HW</plugin>
             <param name="can_interface">${left_can_interface}</param>
             <param name="arm_prefix">${left_arm_prefix}</param>
             <param name="hand">${hand}</param>
             <param name="can_fd">${can_fd}</param>
-          </xacro:unless>
+          </xacro:if>
         </hardware>
 
-      <xacro:macro name="configure_joint" params="joint_name initial_position">
+      <xacro:macro name="configure_joint" params="joint_name initial_position kp:=2000.0 kd:=100.0">
         <joint name="${joint_name}">
+          <!-- MuJoCo PID parameters (must be at joint level, not under command_interface)
+               Higher gains needed for proximal joints to hold against gravity -->
+          <xacro:if value="${use_mujoco}">
+            <param name="position_kp">${kp}</param>
+            <param name="position_kd">${kd}</param>
+            <param name="position_ki">0.0</param>
+            <param name="velocity_kp">${kp/10.0}</param>
+            <param name="velocity_kd">${kd/10.0}</param>
+            <param name="velocity_ki">0.0</param>
+          </xacro:if>
+
+          <!-- Command Interfaces -->
+          <xacro:if value="${use_mujoco}">
+            <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
+            <command_interface name="position_pid"/>
+            <command_interface name="velocity_pid"/>
+            <command_interface name="effort"/>
+          </xacro:if>
+          <xacro:unless value="${use_mujoco}">
           <command_interface name="position"/>
           <command_interface name="velocity"/>
           <command_interface name="effort"/>
+          </xacro:unless>
 
           <state_interface name="position">
             <param name="initial_value">${initial_position}</param>
@@ -50,13 +82,15 @@
         </joint>
       </xacro:macro>
 
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint1" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint2" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint3" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint4" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint5" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint6" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint7" initial_position="0.0"/>
+      <!-- Higher gains for proximal joints (1-4) that support more weight -->
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint1" initial_position="0.0" kp="3000.0" kd="150.0"/>
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint2" initial_position="0.0" kp="5000.0" kd="200.0"/>
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint3" initial_position="0.0" kp="3000.0" kd="150.0"/>
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint4" initial_position="0.0" kp="5000.0" kd="200.0"/>
+      <!-- Lower gains for distal joints (5-7) with less inertia -->
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint5" initial_position="0.0" kp="1000.0" kd="50.0"/>
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint6" initial_position="0.0" kp="500.0" kd="30.0"/>
+      <xacro:configure_joint joint_name="openarm_${left_arm_prefix}joint7" initial_position="0.0" kp="500.0" kd="30.0"/>
 
       <xacro:if value="${hand}">
         <xacro:configure_joint joint_name="openarm_${left_arm_prefix}finger_joint1" initial_position="0.0" />
@@ -67,27 +101,40 @@
     <ros2_control name="openarm_right_hardware_interface" type="system">
         <hardware>
           <param name="arm_type">${arm_type}</param>
-          <xacro:if value="${use_fake_hardware}">
+
+          <!-- MuJoCo Physics Simulation -->
+          <xacro:if value="${use_mujoco}">
+            <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+            <!-- Always use "all" mode to enable dynamic controller switching -->
+            <param name="control_mode">all</param>
+          </xacro:if>
+
+          <!-- Fake Hardware (Mock Interface) -->
+          <xacro:if value="${use_fake_hardware and not use_mujoco}">
             <plugin>fake_components/GenericSystem</plugin>
             <param name="fake_sensor_commands">${fake_sensor_commands}</param>
             <param name="state_following_offset">0.0</param>
           </xacro:if>
-          <xacro:unless value="${use_fake_hardware}">
+
+          <!-- Real Hardware (CAN Bus) -->
+          <xacro:if value="${not use_fake_hardware and not use_mujoco}">
             <plugin>openarm_hardware/OpenArm_v10HW</plugin>
             <param name="can_interface">${right_can_interface}</param>
             <param name="arm_prefix">${right_arm_prefix}</param>
             <param name="hand">${hand}</param>
             <param name="can_fd">${can_fd}</param>
-          </xacro:unless>
+          </xacro:if>
         </hardware>
 
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint1" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint2" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint3" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint4" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint5" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint6" initial_position="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint7" initial_position="0.0"/>
+      <!-- Higher gains for proximal joints (1-4) that support more weight -->
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint1" initial_position="0.0" kp="3000.0" kd="150.0"/>
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint2" initial_position="0.0" kp="5000.0" kd="200.0"/>
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint3" initial_position="0.0" kp="3000.0" kd="150.0"/>
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint4" initial_position="0.0" kp="5000.0" kd="200.0"/>
+      <!-- Lower gains for distal joints (5-7) with less inertia -->
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint5" initial_position="0.0" kp="1000.0" kd="50.0"/>
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint6" initial_position="0.0" kp="500.0" kd="30.0"/>
+      <xacro:configure_joint joint_name="openarm_${right_arm_prefix}joint7" initial_position="0.0" kp="500.0" kd="30.0"/>
 
       <xacro:if value="${hand}">
         <xacro:configure_joint joint_name="openarm_${right_arm_prefix}finger_joint1" initial_position="0.0" />
