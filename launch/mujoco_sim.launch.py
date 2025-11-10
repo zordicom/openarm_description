@@ -6,18 +6,26 @@ Launch OpenARM in MuJoCo simulation with ros2_control.
 This launch file:
 1. Generates robot description with MuJoCo plugin enabled
 2. Starts the MuJoCo ROS2 control node
-3. Loads the specified controller (position/velocity/effort)
+3. Loads all controllers (position, velocity, effort) for dynamic switching
 4. Optionally starts RViz for visualization
 
+The system uses control_mode:=all in MuJoCo, which enables automatic controller
+switching based on which ROS2 controller is active.
+
 Usage Examples:
-    # Basic launch with position control
+    # Basic launch (starts with position controller active)
     ros2 launch openarm_description mujoco_sim.launch.py
 
-    # Velocity control
-    ros2 launch openarm_description mujoco_sim.launch.py control_mode:=velocity
+    # Switch to velocity controller at runtime:
+    ros2 control switch_controllers --deactivate joint_trajectory_controller \
+        --activate velocity_controller
 
-    # Effort control with hand
-    ros2 launch openarm_description mujoco_sim.launch.py control_mode:=effort hand:=true
+    # Switch to effort controller at runtime:
+    ros2 control switch_controllers --deactivate velocity_controller \
+        --activate effort_controller
+
+    # With hand
+    ros2 launch openarm_description mujoco_sim.launch.py hand:=true
 
     # Bimanual configuration
     ros2 launch openarm_description mujoco_sim.launch.py bimanual:=true
@@ -31,13 +39,13 @@ Usage Examples:
 """
 
 import os
-from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
+    OpaqueFunction,
     RegisterEventHandler,
 )
 from launch.conditions import IfCondition
@@ -59,15 +67,6 @@ def generate_launch_description():
             "arm_type",
             default_value="v10",
             description="ARM type (e.g., v10)",
-        )
-    )
-
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "control_mode",
-            default_value="position",
-            description="Control mode: position, velocity, or effort",
-            choices=["position", "velocity", "effort"],
         )
     )
 
@@ -109,7 +108,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "mujoco_model_path",
             default_value="",
-            description="Override path to MuJoCo XML model (default: auto-detect based on hand/bimanual)",
+            description=(
+                "Override path to MuJoCo XML model "
+                "(default: auto-detect based on hand/bimanual)"
+            ),
         )
     )
 
@@ -122,8 +124,6 @@ def generate_launch_description():
     )
 
     # Get launch configurations
-    arm_type = LaunchConfiguration("arm_type")
-    control_mode = LaunchConfiguration("control_mode")
     hand = LaunchConfiguration("hand")
     bimanual = LaunchConfiguration("bimanual")
     use_rviz = LaunchConfiguration("use_rviz")
@@ -131,8 +131,8 @@ def generate_launch_description():
     mujoco_model_path = LaunchConfiguration("mujoco_model_path")
     use_sim_time = LaunchConfiguration("use_sim_time")
 
-    # Generate robot description
-    # Note: control_mode defaults to "all" in xacro, enabling dynamic controller switching
+    # Generate robot description with all control modes enabled
+    # control_mode:=all enables dynamic switching between controllers
     robot_description_content = ParameterValue(
         Command([
             FindExecutable(name="xacro"),
@@ -142,6 +142,8 @@ def generate_launch_description():
             "ros2_control:=true",
             " ",
             "use_mujoco:=true",
+            " ",
+            "control_mode:=all",
             " ",
             "hand:=",
             hand,
@@ -154,12 +156,8 @@ def generate_launch_description():
 
     robot_description = {"robot_description": robot_description_content}
 
-    # Controller configuration based on control mode
-    # Note: We use PythonExpression to dynamically select config file
+    # Controller configurations for all three modes
     controller_config_path = os.path.join(pkg_openarm_description, "config", "mujoco")
-
-    # We'll need to handle this differently since LaunchConfiguration can't be directly used in paths
-    # For now, let's provide all three configs and use a custom mechanism
     position_config = os.path.join(controller_config_path, "controllers_position.yaml")
     velocity_config = os.path.join(controller_config_path, "controllers_velocity.yaml")
     effort_config = os.path.join(controller_config_path, "controllers_effort.yaml")
@@ -192,16 +190,17 @@ def generate_launch_description():
 
         # If not found in install, try source directory (for development)
         if not os.path.exists(install_path):
-            # pkg_openarm_description is like: /path/to/install/openarm_description/share/openarm_description
-            # We need to get to: /path/to/src/openarm_description/mujoco_models/model_name
+            # pkg_openarm_description is like:
+            # /path/to/install/openarm_description/share/openarm_description
+            # We need to get to:
+            # /path/to/src/openarm_description/mujoco_models/model_name
             # Go up from install dir to workspace root, then to src
-            install_share = pkg_openarm_description  # .../install/openarm_description/share/openarm_description
-            install_pkg = os.path.dirname(
-                install_share
-            )  # .../install/openarm_description/share
-            install_pkg = os.path.dirname(
-                install_pkg
-            )  # .../install/openarm_description
+            install_share = pkg_openarm_description
+            # .../install/openarm_description/share/openarm_description
+            install_pkg = os.path.dirname(install_share)
+            # .../install/openarm_description/share
+            install_pkg = os.path.dirname(install_pkg)
+            # .../install/openarm_description
             install_dir = os.path.dirname(install_pkg)  # .../install
             workspace_root = os.path.dirname(install_dir)  # .../ros2_ws
 
@@ -217,15 +216,6 @@ def generate_launch_description():
 
         return install_path
 
-    # Use OpaqueFunction to get the model path
-    from launch.substitutions import LaunchConfiguration as LC
-
-    # For now, use a simpler approach with conditional logic
-    # We'll set a default and let users override with mujoco_model_path argument
-    default_mujoco_model = os.path.join(
-        pkg_openarm_description, "mujoco_models", "openarm_v10.xml"
-    )
-
     # Robot State Publisher
     robot_state_publisher = Node(
         package="robot_state_publisher",
@@ -235,25 +225,9 @@ def generate_launch_description():
         parameters=[robot_description, {"use_sim_time": use_sim_time}],
     )
 
-    # Select controller config based on control_mode
-    # We'll use OpaqueFunction to dynamically select the config file
-    from launch.actions import OpaqueFunction
-
-    # Single MuJoCo node with all controller configs for dynamic switching
+    # MuJoCo node launcher with all controller configs
     def launch_mujoco_node(context):
-        mode = context.perform_substitution(control_mode)
-
-        # Load ALL controller configs to enable dynamic switching
-        # The initial controller will be determined by control_mode
-        all_configs = [position_config, velocity_config, effort_config]
-
-        config_map = {
-            "position": position_config,
-            "velocity": velocity_config,
-            "effort": effort_config,
-        }
-        selected_config = config_map.get(mode, position_config)
-
+        """Launch MuJoCo ROS2 Control node with all controllers."""
         # Get the appropriate MuJoCo model path
         model_path = get_mujoco_model_path(context)
 
@@ -265,6 +239,8 @@ def generate_launch_description():
         hand_val = context.perform_substitution(hand)
         bimanual_val = context.perform_substitution(bimanual)
         print(f"  hand={hand_val}, bimanual={bimanual_val}")
+        print("  Control mode: all (dynamic switching enabled)")
+        print("  Controllers: position, velocity, effort")
         print(f"{'=' * 60}\n")
 
         if not os.path.exists(model_path):
@@ -281,15 +257,6 @@ def generate_launch_description():
             print(f"{'=' * 60}\n")
             raise FileNotFoundError(f"MuJoCo model not found: {model_path}")
 
-        # Debug: Print parameters being passed
-        print("Passing parameters to MuJoCo node:")
-        print("  - configs: ALL (position, velocity, effort) for dynamic switching")
-        print(f"  - mujoco_model_path: {model_path}")
-        print("  - control_mode: all (always, hardcoded in URDF)")
-        print(f"  - initial_controller: {mode}")
-        print(f"  - use_sim_time: {context.perform_substitution(use_sim_time)}")
-        print()
-
         return [
             Node(
                 package="mujoco_ros2_control",
@@ -297,7 +264,6 @@ def generate_launch_description():
                 output="screen",
                 parameters=[
                     robot_description,
-                    # Load ALL controller configs to enable dynamic switching
                     position_config,
                     velocity_config,
                     effort_config,
@@ -348,7 +314,7 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Load ALL controllers as inactive first (for dynamic switching)
+    # Load all controllers as inactive first (for dynamic switching)
     load_position_controller_inactive = ExecuteProcess(
         cmd=[
             "ros2",
@@ -391,6 +357,20 @@ def generate_launch_description():
         output="screen",
     )
 
+    # Activate position controller by default
+    activate_position_controller = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "control",
+            "set_controller_state",
+            "joint_trajectory_controller",
+            "active",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+        output="screen",
+    )
+
     # Event handlers for sequential controller loading
     # Load joint state broadcaster when robot state publisher starts
     load_joint_state_broadcaster_event = RegisterEventHandler(
@@ -412,39 +392,13 @@ def generate_launch_description():
         )
     )
 
-    # After all controllers are loaded, activate the selected one based on control_mode
-    def activate_selected_controller(context):
-        mode = context.perform_substitution(control_mode)
-        controller_name_map = {
-            "position": "joint_trajectory_controller",
-            "velocity": "velocity_controller",
-            "effort": "effort_controller",
-        }
-        selected_name = controller_name_map.get(mode, "joint_trajectory_controller")
-
-        return [
-            RegisterEventHandler(
-                event_handler=OnProcessExit(
-                    target_action=load_effort_controller_inactive,
-                    on_exit=[
-                        ExecuteProcess(
-                            cmd=[
-                                "ros2",
-                                "control",
-                                "set_controller_state",
-                                selected_name,
-                                "active",
-                                "--controller-manager",
-                                "/controller_manager",
-                            ],
-                            output="screen",
-                        )
-                    ],
-                )
-            )
-        ]
-
-    activate_controller_launcher = OpaqueFunction(function=activate_selected_controller)
+    # After all controllers are loaded, activate position controller
+    activate_position_event = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=load_effort_controller_inactive,
+            on_exit=[activate_position_controller],
+        )
+    )
 
     nodes_to_start = [
         *declared_arguments,
@@ -453,8 +407,8 @@ def generate_launch_description():
         mujoco_node_launcher,
         rviz_node,
         load_joint_state_broadcaster_event,
-        load_all_controllers_event,  # Load all three controllers as inactive
-        activate_controller_launcher,  # Activate the selected one
+        load_all_controllers_event,
+        activate_position_event,
     ]
 
     return LaunchDescription(nodes_to_start)
