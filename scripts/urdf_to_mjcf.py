@@ -120,6 +120,22 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
         for freejoint in body.findall("./freejoint[@name='root']"):
             body.remove(freejoint)
 
+    # Remove auto-generated actuators (we use qfrc_applied, not ctrl)
+    for actuator in root.findall(".//actuator"):
+        root.remove(actuator)
+        print("✓ Removed auto-generated actuators (using qfrc_applied instead)")
+
+    # Remove actuator sensors (since actuators are removed)
+    sensor_elem = root.find(".//sensor")
+    if sensor_elem is not None:
+        actuator_sensors_removed = 0
+        for sensor in list(sensor_elem):
+            if sensor.tag in ["actuatorpos", "actuatorvel", "actuatorfrc"]:
+                sensor_elem.remove(sensor)
+                actuator_sensors_removed += 1
+        if actuator_sensors_removed > 0:
+            print(f"✓ Removed {actuator_sensors_removed} actuator sensors")
+
     # Find all mesh elements
     for mesh in root.findall(".//mesh[@file]"):
         mesh_filename = mesh.get("file")
