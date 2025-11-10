@@ -137,66 +137,7 @@
     </body>
   </worldbody>
 
-  <actuator>
-    <motor name="openarm_left_joint1" joint="openarm_left_joint1" ctrllimited="true" ctrlrange="-40 40" gear="1" />
-    <motor name="openarm_left_joint2" joint="openarm_left_joint2" ctrllimited="true" ctrlrange="-40 40" gear="1" />
-    <motor name="openarm_left_joint3" joint="openarm_left_joint3" ctrllimited="true" ctrlrange="-27 27" gear="1" />
-    <motor name="openarm_left_joint4" joint="openarm_left_joint4" ctrllimited="true" ctrlrange="-27 27" gear="1" />
-    <motor name="openarm_left_joint5" joint="openarm_left_joint5" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-    <motor name="openarm_left_joint6" joint="openarm_left_joint6" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-    <motor name="openarm_left_joint7" joint="openarm_left_joint7" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-    <motor name="openarm_right_joint1" joint="openarm_right_joint1" ctrllimited="true" ctrlrange="-40 40" gear="1" />
-    <motor name="openarm_right_joint2" joint="openarm_right_joint2" ctrllimited="true" ctrlrange="-40 40" gear="1" />
-    <motor name="openarm_right_joint3" joint="openarm_right_joint3" ctrllimited="true" ctrlrange="-27 27" gear="1" />
-    <motor name="openarm_right_joint4" joint="openarm_right_joint4" ctrllimited="true" ctrlrange="-27 27" gear="1" />
-    <motor name="openarm_right_joint5" joint="openarm_right_joint5" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-    <motor name="openarm_right_joint6" joint="openarm_right_joint6" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-    <motor name="openarm_right_joint7" joint="openarm_right_joint7" ctrllimited="true" ctrlrange="-7 7" gear="1" />
-  </actuator>
-
   <sensor>
-    <actuatorpos name="openarm_left_joint1_p" actuator="openarm_left_joint1" />
-    <actuatorvel name="openarm_left_joint1_v" actuator="openarm_left_joint1" />
-    <actuatorfrc name="openarm_left_joint1_f" actuator="openarm_left_joint1" noise="0.001" />
-    <actuatorpos name="openarm_left_joint2_p" actuator="openarm_left_joint2" />
-    <actuatorvel name="openarm_left_joint2_v" actuator="openarm_left_joint2" />
-    <actuatorfrc name="openarm_left_joint2_f" actuator="openarm_left_joint2" noise="0.001" />
-    <actuatorpos name="openarm_left_joint3_p" actuator="openarm_left_joint3" />
-    <actuatorvel name="openarm_left_joint3_v" actuator="openarm_left_joint3" />
-    <actuatorfrc name="openarm_left_joint3_f" actuator="openarm_left_joint3" noise="0.001" />
-    <actuatorpos name="openarm_left_joint4_p" actuator="openarm_left_joint4" />
-    <actuatorvel name="openarm_left_joint4_v" actuator="openarm_left_joint4" />
-    <actuatorfrc name="openarm_left_joint4_f" actuator="openarm_left_joint4" noise="0.001" />
-    <actuatorpos name="openarm_left_joint5_p" actuator="openarm_left_joint5" />
-    <actuatorvel name="openarm_left_joint5_v" actuator="openarm_left_joint5" />
-    <actuatorfrc name="openarm_left_joint5_f" actuator="openarm_left_joint5" noise="0.001" />
-    <actuatorpos name="openarm_left_joint6_p" actuator="openarm_left_joint6" />
-    <actuatorvel name="openarm_left_joint6_v" actuator="openarm_left_joint6" />
-    <actuatorfrc name="openarm_left_joint6_f" actuator="openarm_left_joint6" noise="0.001" />
-    <actuatorpos name="openarm_left_joint7_p" actuator="openarm_left_joint7" />
-    <actuatorvel name="openarm_left_joint7_v" actuator="openarm_left_joint7" />
-    <actuatorfrc name="openarm_left_joint7_f" actuator="openarm_left_joint7" noise="0.001" />
-    <actuatorpos name="openarm_right_joint1_p" actuator="openarm_right_joint1" />
-    <actuatorvel name="openarm_right_joint1_v" actuator="openarm_right_joint1" />
-    <actuatorfrc name="openarm_right_joint1_f" actuator="openarm_right_joint1" noise="0.001" />
-    <actuatorpos name="openarm_right_joint2_p" actuator="openarm_right_joint2" />
-    <actuatorvel name="openarm_right_joint2_v" actuator="openarm_right_joint2" />
-    <actuatorfrc name="openarm_right_joint2_f" actuator="openarm_right_joint2" noise="0.001" />
-    <actuatorpos name="openarm_right_joint3_p" actuator="openarm_right_joint3" />
-    <actuatorvel name="openarm_right_joint3_v" actuator="openarm_right_joint3" />
-    <actuatorfrc name="openarm_right_joint3_f" actuator="openarm_right_joint3" noise="0.001" />
-    <actuatorpos name="openarm_right_joint4_p" actuator="openarm_right_joint4" />
-    <actuatorvel name="openarm_right_joint4_v" actuator="openarm_right_joint4" />
-    <actuatorfrc name="openarm_right_joint4_f" actuator="openarm_right_joint4" noise="0.001" />
-    <actuatorpos name="openarm_right_joint5_p" actuator="openarm_right_joint5" />
-    <actuatorvel name="openarm_right_joint5_v" actuator="openarm_right_joint5" />
-    <actuatorfrc name="openarm_right_joint5_f" actuator="openarm_right_joint5" noise="0.001" />
-    <actuatorpos name="openarm_right_joint6_p" actuator="openarm_right_joint6" />
-    <actuatorvel name="openarm_right_joint6_v" actuator="openarm_right_joint6" />
-    <actuatorfrc name="openarm_right_joint6_f" actuator="openarm_right_joint6" noise="0.001" />
-    <actuatorpos name="openarm_right_joint7_p" actuator="openarm_right_joint7" />
-    <actuatorvel name="openarm_right_joint7_v" actuator="openarm_right_joint7" />
-    <actuatorfrc name="openarm_right_joint7_f" actuator="openarm_right_joint7" noise="0.001" />
     <framequat name="orientation" objtype="site" noise="0.001" objname="imu" />
     <gyro name="angular-velocity" site="imu" noise="0.005" cutoff="34.9" />
   </sensor>
