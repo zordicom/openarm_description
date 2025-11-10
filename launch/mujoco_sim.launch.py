@@ -48,9 +48,14 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnProcessExit, OnProcessStart
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    LaunchConfiguration,
+    NotSubstitution,
+)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -96,6 +101,14 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
+            "headless",
+            default_value="false",
+            description="Run without any viewer (headless mode for servers/CI)",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
             "rviz_config",
             default_value=os.path.join(
                 pkg_openarm_description, "rviz", "mujoco_view.rviz"
@@ -130,6 +143,7 @@ def generate_launch_description():
     rviz_config = LaunchConfiguration("rviz_config")
     mujoco_model_path = LaunchConfiguration("mujoco_model_path")
     use_sim_time = LaunchConfiguration("use_sim_time")
+    headless = LaunchConfiguration("headless")
 
     # Generate robot description with all control modes enabled
     # control_mode:=all enables dynamic switching between controllers
@@ -270,6 +284,7 @@ def generate_launch_description():
                     {
                         "mujoco_model_path": model_path,
                         "use_sim_time": use_sim_time,
+                        "headless": headless,  # Use launch argument (default: false = viewer enabled)
                     },
                 ],
             )
@@ -298,6 +313,7 @@ def generate_launch_description():
         parameters=[{"use_sim_time": use_sim_time}],
         condition=IfCondition(use_rviz),
     )
+
 
     # Load joint state broadcaster
     load_joint_state_broadcaster = ExecuteProcess(
