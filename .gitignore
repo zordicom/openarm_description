@@ -16,3 +16,7 @@
 MUJOCO_LOG.TXT
 scripts/MUJOCO_LOG.TXT
 **/MUJOCO_LOG.TXT
+
+# Data and visualization files
+*.csv
+*.png
