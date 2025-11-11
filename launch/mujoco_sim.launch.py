@@ -314,7 +314,6 @@ def generate_launch_description():
         condition=IfCondition(use_rviz),
     )
 
-
     # Load joint state broadcaster
     load_joint_state_broadcaster = ExecuteProcess(
         cmd=[

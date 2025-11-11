@@ -7,7 +7,7 @@
 
 controller_manager:
   ros__parameters:
-    update_rate: 500  # Hz - MuJoCo can handle higher rates than real hardware
+    update_rate: 1000  # Hz - Match MuJoCo's 1ms timestep for minimal latency
 
     # Controllers to be loaded
     joint_trajectory_controller:

@@ -98,6 +98,8 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
     urdf2mjcf creates mesh references like "link0_symp.stl" but copies files to
     subdirectories like "meshes/arm/v10/collision/link0_symp.stl". This function
     finds the actual mesh files and updates the MJCF paths.
+
+    Also disables all collisions by default to prevent self-collision issues.
     """
     import xml.etree.ElementTree as ET
 
@@ -135,6 +137,23 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
                 actuator_sensors_removed += 1
         if actuator_sensors_removed > 0:
             print(f"✓ Removed {actuator_sensors_removed} actuator sensors")
+
+    # DISABLE ALL COLLISIONS: Set contype=0 conaffinity=0 for all geoms
+    # This prevents self-collision issues that interfere with gravity compensation
+    # 1. Set in defaults
+    for default in root.findall(".//default"):
+        for geom in default.findall("./geom"):
+            geom.set("contype", "0")
+            geom.set("conaffinity", "0")
+
+    # 2. Remove explicit contype/conaffinity from individual geoms (they override defaults)
+    for geom in root.findall(".//geom"):
+        if "contype" in geom.attrib:
+            geom.set("contype", "0")
+        if "conaffinity" in geom.attrib:
+            geom.set("conaffinity", "0")
+
+    print("✓ Disabled all collisions (contype=0, conaffinity=0)")
 
     # Find all mesh elements
     for mesh in root.findall(".//mesh[@file]"):

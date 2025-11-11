@@ -1,7 +1,21 @@
 # OpenARM MuJoCo Integration - Complete Status & Reference
 
-**Last Updated**: November 10, 2025
+**Last Updated**: November 10, 2025 (Controller Switching Update)
 **Status**: ✅ **Production Ready** (Position Control), ⚠️ **Unstable** (Velocity Control), ✅ **Working** (Effort Control with Gravity Compensation)
+
+**Recent Updates (November 2025)**:
+
+- ✅ Implemented proper ros2_control API callbacks (`prepare/perform_command_mode_switch`)
+- ✅ Instant controller switching (no timeout delays)
+- ✅ Fixed simulation timing (clock synchronization)
+- ✅ Thread-safe clock publishing (RViz stability)
+- ✅ Simplified launch API: All controllers loaded at startup, position active by default
+- ✅ Removed `control_mode` launch argument (use runtime switching instead)
+
+**Quick Links**:
+
+- 📦 [Setup & Installation Guide](ZORDI_README.md) - Complete setup instructions
+- 🔧 [Torque Control vs Actuators](torque_vs_actuator_control.md) - Technical deep dive
 
 ---
 
@@ -10,12 +24,13 @@
 1. [Executive Summary](#executive-summary)
 2. [System Architecture](#system-architecture)
 3. [Control Modes](#control-modes)
-4. [Quick Start](#quick-start)
-5. [Implementation Details](#implementation-details)
-6. [File Structure](#file-structure)
-7. [Known Issues & Limitations](#known-issues--limitations)
-8. [Troubleshooting](#troubleshooting)
-9. [API Reference](#api-reference)
+4. [Quick Start](#quick-start) - *See [ZORDI_README.md](ZORDI_README.md) for full setup*
+5. [Testing](#testing-the-controller-switching-implementation)
+6. [Implementation Details](#implementation-details)
+7. [File Structure](#file-structure)
+8. [Known Issues & Limitations](#known-issues--limitations)
+9. [Troubleshooting](#troubleshooting)
+10. [API Reference](#api-reference)
 
 ---
 
@@ -25,9 +40,9 @@ OpenARM now has full MuJoCo physics simulation support via ROS2 Control, enablin
 
 ### What Works
 
-✅ **Position Control** - Excellent stability and accuracy (< 0.02° error)
+✅ **Position Control** - Excellent stability and accuracy (< 0.02° error), active by default
 ✅ **Effort Control** - Works with gravity compensation controller
-✅ **Dynamic Controller Switching** - Switch between modes at runtime
+✅ **Dynamic Controller Switching** - All controllers loaded at startup, switch at runtime with `ros2 control`
 ✅ **Gravity Simulation** - Robot holds position under gravity
 ✅ **Single Arm, Bimanual, Hand** - All configurations supported
 ⚠️ **Velocity Control** - Implemented but unstable (needs tuning)
@@ -35,6 +50,8 @@ OpenARM now has full MuJoCo physics simulation support via ROS2 Control, enablin
 ### Key Achievement
 
 **Custom `mujoco_ros2_control` fork** enables all three control interfaces (position, velocity, effort) to coexist without conflicts. The hardware interface detects which controller is active and only applies commands from that controller.
+
+**Direct torque control** (`qfrc_applied`) matches OpenARM's real hardware behavior. See [`docs/torque_vs_actuator_control.md`](torque_vs_actuator_control.md) for detailed comparison with MuJoCo actuators.
 
 ---
 
@@ -96,288 +113,16 @@ MuJoCo integration → new q, q̇, q̈
 MujocoSystem::read() publishes joint states to ROS2
 ```
 
-### Key Implementation Insight: qfrc_applied vs ctrl
+### Torque Control vs MuJoCo Actuators
 
-**What we do:**
+**OpenARM uses direct torque control (`qfrc_applied`), not MuJoCo actuators (`ctrl`).**
 
-- Write joint torques directly to `mj_data->qfrc_applied[joint_idx]`
-- MuJoCo's forward dynamics uses this as external generalized force
-
-**What we DON'T do:**
-
-- We don't use `mj_data->ctrl[]` (MJCF actuator inputs)
-- Generated MJCF files have NO `<actuator>` section (auto-removed during conversion)
+- We write joint torques directly to `mj_data->qfrc_applied[joint_idx]`
 - This gives us direct torque control without actuator dynamics
+- Matches OpenARM's real hardware (Damiao motors in torque control mode)
+- Generated MJCF files have NO `<actuator>` section (auto-removed during conversion)
 
-**Note on auto-generated actuators:**
-
-The `urdf2mjcf` converter automatically generates `<actuator>` elements for all joints. Our conversion script (`urdf_to_mjcf.py`) **automatically removes these** during post-processing since we use `qfrc_applied` instead of `ctrl[]`.
-
-**Old generated MJCF had:**
-
-```xml
-<actuator>
-  <motor name="openarm_joint1" joint="openarm_joint1"
-         ctrllimited="true" ctrlrange="-40 40" gear="1" />
-  <!-- ... 7 motors + actuator sensors ... -->
-</actuator>
-```
-
-**Our post-processing removes them** to avoid confusion and keep MJCF files clean.
-
----
-
-### Detailed Comparison: qfrc_applied vs ctrl (MJCF Actuators)
-
-#### Option 1: Direct Torque Application (qfrc_applied) ✅ **Current Implementation**
-
-**How it works:**
-
-- Torques written directly to `qfrc_applied[]`
-- Bypasses MuJoCo actuator model entirely
-- Force enters directly into forward dynamics equation
-
-**Pros:**
-
-1. **Transparent Control** - No hidden actuator dynamics, what you command is what you get
-2. **Simplified Debugging** - Direct relationship between commanded torque and applied force
-3. **Matching Hardware Behavior** - OpenARM Damiao motors use torque control mode on real hardware
-4. **No Parameter Tuning** - No need to tune actuator gain, bias, or transmission parameters
-5. **Performance** - Slightly more efficient (skips actuator computation step)
-6. **Flexible Control** - Can implement any control law externally (PID, computed torque, impedance, etc.)
-
-**Cons:**
-
-1. **No Built-in Actuator Realism** - Doesn't model motor dynamics (back-EMF, inductance, saturation curves)
-2. **No Automatic Control Clamping** - Must manually clamp torques to joint limits (though we do this in code)
-3. **Less Modularity** - Control logic is in C++ code, not declaratively in MJCF
-4. **No Actuator Sensors** - Can't use MuJoCo's actuator force/position/velocity sensors (though we read joint states directly)
-
-**When to use:**
-
-- ✅ When real hardware uses direct torque control (OpenARM case)
-- ✅ When implementing custom control algorithms
-- ✅ When you want predictable, transparent behavior
-- ✅ When debugging control issues
-
----
-
-#### Option 2: MJCF Actuator Inputs (ctrl) ❌ **Not Currently Used**
-
-**How it works:**
-
-- Commands written to `ctrl[]` array
-- MuJoCo actuator model processes commands
-- Actuator generates forces using: `force = gain * (ctrl - bias) * transmission`
-- Force enters forward dynamics equation
-
-**Actuator types available:**
-
-- `motor` - Simple torque actuator (our MJCF uses this)
-- `position` - Position servo with PD control
-- `velocity` - Velocity servo with PI control
-- `intvelocity` - Integrated velocity control
-- `damper` - Damping actuator
-- `cylinder` - Pneumatic/hydraulic actuator
-- `muscle` - Hill-type muscle model
-
-**Pros:**
-
-1. **Built-in Actuator Dynamics** - Can model realistic motor behavior (activation, saturation, non-linearities)
-2. **Declarative Configuration** - Actuator parameters in MJCF, easy to modify without recompiling
-3. **Advanced Actuator Types** - Access to position/velocity servos, muscles, hydraulics, etc.
-4. **Automatic Control Clamping** - `ctrlrange` enforces limits automatically
-5. **Actuator Sensors** - Can use actuatorpos, actuatorvel, actuatorfrc sensors
-6. **Modularity** - Swap actuator models without changing control code
-
-**Cons:**
-
-1. **Added Complexity** - Need to understand and tune actuator parameters (gain, bias, dynprm, etc.)
-2. **Indirect Control** - Commanded value ≠ applied force (goes through transfer function)
-3. **Debugging Difficulty** - Extra layer between command and effect
-4. **Parameter Uncertainty** - Real motor parameters may not be accurately known
-5. **Performance Overhead** - Actuator computation adds (minor) computational cost
-6. **Mismatch with Hardware** - If real robot uses torque control, simulation using position servo is less representative
-
-**When to use:**
-
-- When simulating systems with complex actuator dynamics (muscles, pneumatics)
-- When you want built-in position/velocity servo behavior
-- When actuator model is important to study (e.g., motor saturation effects)
-- When you need declarative, MJCF-based configuration
-
----
-
-### Why We Chose qfrc_applied
-
-**Reason 1: Hardware Matching**
-
-- OpenARM uses Damiao motors in torque control mode
-- Real hardware: `τ_cmd → motor → τ_actual`
-- Simulation should match: `τ_cmd → qfrc_applied`
-
-**Reason 2: Control Architecture**
-
-- High-level controllers (CartesianController, crisp_controllers) compute desired torques
-- These controllers already handle PID, gravity compensation, impedance, etc.
-- No need for MuJoCo to add another control layer
-
-**Reason 3: Transparency**
-
-- During development/debugging, direct torque application makes cause-and-effect clear
-- No hidden actuator dynamics to account for
-
-**Reason 4: Simplicity**
-
-- Don't need to identify/tune motor parameters (Kt, Kv, resistance, inductance, etc.)
-- Fewer sources of model mismatch
-
----
-
-### When You SHOULD Use ctrl (MJCF Actuators)
-
-**Scenario 1: Built-in Servo Control**
-If you want MuJoCo to handle PD position control:
-
-```xml
-<actuator>
-  <position name="joint1_servo" joint="openarm_joint1"
-            kp="100" kv="10" ctrlrange="-1.4 3.5" />
-</actuator>
-```
-
-Then command desired positions to `ctrl[]` and MuJoCo does the rest.
-
-**Scenario 2: Studying Actuator Dynamics**
-If motor saturation, back-EMF, or activation dynamics are important:
-
-```xml
-<actuator>
-  <motor name="joint1_motor" joint="openarm_joint1"
-         gear="100" dynprm="1 0 0"
-         ctrlrange="-24 24" />  <!-- Voltage limits -->
-</actuator>
-```
-
-Model realistic motor transfer function.
-
-**Scenario 3: Biological Systems**
-For muscle-actuated robots:
-
-```xml
-<actuator>
-  <muscle name="biceps" joint="elbow"
-          tausmooth="0.01 0.5" />
-</actuator>
-```
-
-**Scenario 4: Hydraulic/Pneumatic**
-For systems with cylinder actuators:
-
-```xml
-<actuator>
-  <cylinder name="hydraulic_ram" joint="knee"
-            area="0.01" diameter="0.05" />
-</actuator>
-```
-
----
-
-### Hybrid Approach (Future Consideration)
-
-It's possible to use BOTH methods:
-
-- `qfrc_applied` for primary control torques
-- `ctrl` for auxiliary actuators (e.g., gripper, special mechanisms)
-
-Or switch between them based on control mode:
-
-- Effort mode → use `qfrc_applied` (direct torque)
-- Position/Velocity mode → use `ctrl` with MuJoCo's built-in servos
-
-**Trade-off:** Increased complexity for potentially more realistic servo simulation.
-
----
-
-### Recommendation
-
-**For OpenARM (current use case):**
-
-- ✅ **Keep using qfrc_applied** - Matches real hardware torque control
-- ✅ Implement high-level control externally (Pinocchio, crisp_controllers)
-- ✅ Simple, transparent, debuggable
-
-**For future robots:**
-
-- If hardware uses position/velocity servos → consider MuJoCo position/velocity actuators
-- If studying motor dynamics is critical → implement motor model via ctrl
-- If simplicity and transparency are priorities → stick with qfrc_applied
-
----
-
-### Technical Note: Actuator Force Generation
-
-For those interested, MuJoCo's actuator force generation:
-
-```
-qfrc_actuator = transmission^T * gain * (ctrl - bias) * activation
-
-Where:
-- transmission: Maps actuator space to joint space (gear ratio, moment arms)
-- gain: Actuator strength/motor constant
-- bias: Neutral point offset
-- activation: Dynamics state (muscles have activation buildup)
-- ctrl: Control input (what you command)
-```
-
-With `qfrc_applied`, you directly set the end result, bypassing this computation.
-
----
-
-### Auto-Generated Actuators Are Automatically Removed ✅
-
-The `urdf2mjcf` tool automatically generates `<actuator>` elements for all joints. **Our conversion script now automatically removes these** during post-processing.
-
-**Why we remove them:**
-
-- ✅ **Avoid confusion** - Makes it clear we use `qfrc_applied`, not `ctrl[]`
-- ✅ **Cleaner MJCF** - Generated files are more readable and match our control approach
-- ✅ **No URDF changes needed** - Actuators come from converter, not URDF
-
-**Implementation:**
-
-This happens automatically in `fix_mjcf_mesh_paths()` in `scripts/urdf_to_mjcf.py`:
-
-```python
-# Remove auto-generated actuators (we use qfrc_applied, not ctrl)
-for actuator in root.findall(".//actuator"):
-    root.remove(actuator)
-    print("✓ Removed auto-generated actuators (using qfrc_applied instead)")
-
-# Remove actuator sensors (since actuators are removed)
-sensor_elem = root.find(".//sensor")
-if sensor_elem is not None:
-    for sensor in list(sensor_elem):
-        if sensor.tag in ["actuatorpos", "actuatorvel", "actuatorfrc"]:
-            sensor_elem.remove(sensor)
-```
-
-**Result:**
-
-When you run `python3 scripts/urdf_to_mjcf.py`, the output MJCF will have:
-
-- ✅ NO `<actuator>` section
-- ✅ NO actuator sensors (actuatorpos, actuatorvel, actuatorfrc)
-- ✅ Clean MJCF that clearly shows direct torque control via qfrc_applied
-
-**To regenerate clean MJCF files:**
-
-```bash
-cd ~/ros2_ws/src/openarm_description
-python3 scripts/urdf_to_mjcf.py --arm-type v10 --output mujoco_models/openarm_v10.xml
-```
-
-You'll see: `✓ Removed auto-generated actuators (using qfrc_applied instead)`
+**For detailed comparison and alternatives**, see: [`docs/torque_vs_actuator_control.md`](torque_vs_actuator_control.md)
 
 ---
 
@@ -407,8 +152,8 @@ Joint 5-7 (7 Nm limit):   Kp=5.0,   Kd=0.5,  Ki=0.0
 **Usage:**
 
 ```bash
-# Launch
-ros2 launch openarm_description mujoco_sim.launch.py control_mode:=position
+# Launch (position controller active by default)
+ros2 launch openarm_description mujoco_sim.launch.py
 
 # Send trajectory
 ros2 action send_goal /joint_trajectory_controller/follow_joint_trajectory \
@@ -480,16 +225,20 @@ tau_total = tau_gravity + tau_damping
 **Usage:**
 
 ```bash
-# Terminal 1: Launch with effort control
+# Terminal 1: Launch simulation
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
-ros2 launch openarm_description mujoco_sim.launch.py control_mode:=effort
+ros2 launch openarm_description mujoco_sim.launch.py
 
-# Terminal 2: Start gravity compensation
+# Terminal 2: Switch to effort controller
+ros2 control switch_controllers --activate effort_controller \
+  --deactivate joint_trajectory_controller
+
+# Terminal 3: Start gravity compensation
 python3 scripts/gravity_compensation_controller.py
 
 # Robot now holds position under gravity!
 
-# Terminal 3: Send additional torques for movement
+# Terminal 4: Send additional torques for movement
 ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray \
   "data: [20.0, 20.0, 15.0, 15.0, 3.0, 3.0, 3.0]" -r 100
 ```
@@ -506,86 +255,24 @@ Joint 5-7: ±7 Nm
 
 ## Quick Start
 
-### Prerequisites
+**For complete setup instructions**, see: [`docs/ZORDI_README.md`](ZORDI_README.md)
 
-**1. Install Custom mujoco_ros2_control Fork (REQUIRED):**
-
-```bash
-cd ~/ros2_ws/src
-git clone https://github.com/zordicom/mujoco_ros2_control.git
-cd mujoco_ros2_control
-git checkout 2025-11-control-interface  # Commit: 5a1e443
-
-cd ~/ros2_ws
-colcon build --packages-select mujoco_ros2_control --symlink-install
-source ~/ros2_ws/install/setup.bash
-```
-
-**Why the custom fork?**
-Standard `mujoco_ros2_control` has conflicts when position/velocity/effort interfaces are all exposed. Our fork detects active controllers and prevents interference.
-
-**2. Install MuJoCo Python:**
+### Quick Launch
 
 ```bash
-pip install mujoco urdf2mjcf
-```
+# Prerequisites: Install custom mujoco_ros2_control fork, MuJoCo Python, Pinocchio
+# See ZORDI_README.md for detailed installation steps
 
-**3. Install Pinocchio (for gravity compensation):**
-
-```bash
-sudo apt install ros-humble-pinocchio
-```
-
-### Generate MuJoCo Model
-
-```bash
+# Generate MuJoCo model (first time only)
 cd ~/ros2_ws/src/openarm_description
-
-# Single arm (7 DOF)
 python3 scripts/urdf_to_mjcf.py --arm-type v10 --output mujoco_models/openarm_v10.xml
 
-# With hand (9 DOF)
-python3 scripts/urdf_to_mjcf.py --arm-type v10 --hand --output mujoco_models/openarm_v10_hand.xml
-
-# Bimanual (14 DOF)
-python3 scripts/urdf_to_mjcf.py --arm-type v10 --bimanual --output mujoco_models/openarm_v10_bimanual.xml
-```
-
-### Launch Simulation
-
-**Position Control (Recommended):**
-
-```bash
+# Launch simulation (position controller active by default)
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
 ros2 launch openarm_description mujoco_sim.launch.py
-```
 
-**Effort Control with Gravity Compensation:**
-
-```bash
-# Terminal 1
-export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
-ros2 launch openarm_description mujoco_sim.launch.py control_mode:=effort
-
-# Terminal 2
-python3 scripts/gravity_compensation_controller.py
-```
-
-### Test Position Control
-
-```bash
-# Use example script
+# Test position control
 python3 scripts/example_position_control.py
-
-# Or send manual command
-ros2 action send_goal /joint_trajectory_controller/follow_joint_trajectory \
-  control_msgs/action/FollowJointTrajectory "
-trajectory:
-  joint_names: [openarm_joint1, openarm_joint2, openarm_joint3, openarm_joint4, openarm_joint5, openarm_joint6, openarm_joint7]
-  points:
-  - positions: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    time_from_start: {sec: 3}
-"
 ```
 
 ### Dynamic Controller Switching
@@ -594,15 +281,328 @@ trajectory:
 # List controllers
 ros2 control list_controllers
 
-# Switch to effort control
-ros2 control switch_controllers \
-  --activate effort_controller \
+# Switch between control modes
+ros2 control switch_controllers --activate effort_controller \
   --deactivate joint_trajectory_controller velocity_controller
+```
 
-# Switch back to position control
-ros2 control switch_controllers \
-  --activate joint_trajectory_controller \
-  --deactivate effort_controller velocity_controller
+---
+
+## Testing the Controller Switching Implementation
+
+### Prerequisites for Testing
+
+**Ensure you have completed the setup** in [`docs/ZORDI_README.md`](ZORDI_README.md), including:
+
+- Custom mujoco_ros2_control fork (branch: `2025-11-control-interface`)
+- MuJoCo Python packages
+- Pinocchio
+- Generated MuJoCo models
+
+**Verify installation**:
+
+```bash
+cd ~/ros2_ws/src/mujoco_ros2_control
+git status  # Should show branch: 2025-11-control-interface
+git log --oneline -1  # Verify latest commits include controller switching callbacks
+```
+
+### Test 1: Startup Stability (Position Control Active by Default)
+
+**Purpose:** Verify robot holds initial pose during controller loading (no collapse under gravity)
+
+```bash
+# Terminal 1: Launch and watch for stability
+export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
+ros2 launch openarm_description mujoco_sim.launch.py
+
+# Terminal 2: Monitor joint positions
+ros2 topic echo /joint_states --field position
+
+# Expected: All joints stay near zero (±0.05 rad) for first 5 seconds
+```
+
+**Success Criteria:**
+
+- ✅ Robot doesn't fall during startup
+- ✅ Joints hold position (< 0.05 rad drift)
+- ✅ No error messages in console
+
+### Test 2: Instant Controller Switching (Position → Velocity)
+
+**Purpose:** Verify instant switching with explicit callback logging
+
+```bash
+# Terminal 1: Launch (already running from Test 1)
+
+# Terminal 2: Switch to velocity controller
+ros2 control switch_controllers --deactivate joint_trajectory_controller \
+    --activate velocity_controller
+
+# Terminal 3: Check MuJoCo node logs
+ros2 run rqt_console rqt_console  # Filter by node: mujoco_ros2_control
+```
+
+**Expected Log Messages:**
+
+```
+[INFO] Controller switch: Position interface STOPPED for openarm_joint1
+[INFO] Controller switch: Velocity interface STARTED for openarm_joint1
+```
+
+**Success Criteria:**
+
+- ✅ Log messages appear immediately (< 10ms)
+- ✅ No "timeout" messages (those are from old implementation)
+- ✅ Controller switches without delay
+
+### Test 3: Velocity Controller Activation
+
+**Purpose:** Test that velocity commands are actually applied after switch
+
+```bash
+# Terminal 1: Launch with velocity controller
+ros2 control switch_controllers --activate velocity_controller \
+    --deactivate joint_trajectory_controller effort_controller
+
+# Terminal 2: Send constant velocity command (joint 1 should rotate)
+ros2 topic pub /velocity_controller/commands std_msgs/msg/Float64MultiArray \
+  "data: [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]" -r 100
+
+# Terminal 3: Monitor joint positions
+ros2 topic echo /joint_states --field position
+
+# Expected: joint1 position should increase continuously at ~0.5 rad/s
+```
+
+**Success Criteria:**
+
+- ✅ Joint 1 rotates at commanded velocity
+- ✅ Other joints remain stationary
+- ⚠️ **Known Issue**: Velocity control may drift due to gravity (see limitations)
+
+### Test 4: Effort Controller Switching
+
+**Purpose:** Verify effort control activates and gravity compensation works
+
+```bash
+# Terminal 1: Launch
+ros2 control switch_controllers --activate effort_controller \
+    --deactivate joint_trajectory_controller velocity_controller
+
+# Terminal 2: Start gravity compensation (robot should hold position)
+python3 ~/ros2_ws/src/openarm_description/scripts/gravity_compensation_controller.py
+
+# Terminal 3: Send additional torques
+ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray \
+  "data: [10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]" -r 100
+
+# Expected: Joint 1 moves due to additional 10 Nm torque
+```
+
+**Expected Log Messages:**
+
+```
+[INFO] Controller switch: Position interface STOPPED for openarm_joint1
+[INFO] Controller switch: Effort interface STARTED for openarm_joint1
+```
+
+**Success Criteria:**
+
+- ✅ Robot holds position with gravity compensation
+- ✅ Additional torques cause movement
+- ✅ Switching messages appear in logs
+
+### Test 5: Rapid Switching (Stress Test)
+
+**Purpose:** Verify system handles rapid controller switches without crashes
+
+```bash
+# Terminal 1: Launch (already running)
+
+# Terminal 2: Rapid switching script
+for i in {1..10}; do
+  echo "Switch $i: Position"
+  ros2 control switch_controllers --activate joint_trajectory_controller \
+      --deactivate velocity_controller effort_controller
+  sleep 1
+
+  echo "Switch $i: Velocity"
+  ros2 control switch_controllers --activate velocity_controller \
+      --deactivate joint_trajectory_controller effort_controller
+  sleep 1
+
+  echo "Switch $i: Effort"
+  ros2 control switch_controllers --activate effort_controller \
+      --deactivate joint_trajectory_controller velocity_controller
+  sleep 1
+done
+```
+
+**Success Criteria:**
+
+- ✅ No crashes or error messages
+- ✅ Each switch completes successfully
+- ✅ Log messages appear for each switch
+- ✅ Robot behavior changes with each switch
+
+### Test 6: Simulation Clock Monotonicity
+
+**Purpose:** Verify clock never goes backwards (RViz stability)
+
+```bash
+# Terminal 1: Launch with RViz
+ros2 launch openarm_description mujoco_sim.launch.py use_rviz:=true
+
+# Terminal 2: Monitor clock
+ros2 topic echo /clock --field clock
+
+# Run for 30 seconds and verify time always increases
+```
+
+**Success Criteria:**
+
+- ✅ Clock time monotonically increases
+- ✅ No jumps backward in time
+- ✅ RViz doesn't reset or flicker
+- ✅ TF tree stays stable
+
+### Test 7: Multi-Controller Simultaneous Command Test
+
+**Purpose:** Verify only the active controller's commands are applied
+
+```bash
+# Terminal 1: Launch with position controller active
+ros2 launch openarm_description mujoco_sim.launch.py
+
+# Terminal 2: Send position command (should work)
+ros2 action send_goal /joint_trajectory_controller/follow_joint_trajectory \
+  control_msgs/action/FollowJointTrajectory "
+trajectory:
+  joint_names: [openarm_joint1, openarm_joint2, openarm_joint3, openarm_joint4, openarm_joint5, openarm_joint6, openarm_joint7]
+  points:
+  - positions: [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    time_from_start: {sec: 3}
+"
+
+# Terminal 3: Send velocity command (should be ignored)
+ros2 topic pub /velocity_controller/commands std_msgs/msg/Float64MultiArray \
+  "data: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]" -r 100 &
+
+# Terminal 4: Send effort command (should be ignored)
+ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray \
+  "data: [20.0, 20.0, 15.0, 15.0, 5.0, 5.0, 5.0]" -r 100 &
+
+# Expected: Robot follows position trajectory, ignores velocity/effort commands
+```
+
+**Success Criteria:**
+
+- ✅ Robot follows position command only
+- ✅ Velocity/effort commands don't interfere
+- ✅ No control conflicts or instability
+
+### Test 8: Debug Logging Verification
+
+**Purpose:** Verify periodic debug logs are working
+
+```bash
+# Terminal 1: Launch
+ros2 launch openarm_description mujoco_sim.launch.py
+
+# Terminal 2: Filter logs for joint1 debug messages
+ros2 run rqt_console rqt_console
+# Filter: Message contains "Joint1 Debug"
+
+# Expected: Log message every ~1 second (500 cycles at 500Hz)
+```
+
+**Expected Log Format:**
+
+```
+[INFO] Joint1 Debug: apply_pos=1, is_enabled=1, mode=all, active=1, cmd=0.000, cur=0.000, period_ns=2000000
+```
+
+**Success Criteria:**
+
+- ✅ Debug logs appear every ~1 second
+- ✅ `apply_pos`, `active` flags match expected controller state
+- ✅ Commands and current positions are reasonable
+
+### Test 9: Controller Manager State Verification
+
+**Purpose:** Verify all controllers load correctly and only one is active
+
+```bash
+# Check loaded controllers
+ros2 control list_controllers
+
+# Expected output:
+# joint_state_broadcaster     [active]
+# joint_trajectory_controller [active]    ← Position controller
+# velocity_controller         [inactive]
+# effort_controller           [inactive]
+
+# Check available interfaces
+ros2 control list_hardware_interfaces
+
+# Expected: All position/velocity/effort interfaces listed
+```
+
+**Success Criteria:**
+
+- ✅ All three controllers loaded (1 active, 2 inactive)
+- ✅ All command interfaces available
+- ✅ Only one controller active at a time
+
+### Automated Test Script
+
+Save as `test_controller_switching.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+echo "=== Controller Switching Test Suite ==="
+
+# Ensure environment
+export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
+source ~/ros2_ws/install/setup.bash
+
+# Launch in background
+ros2 launch openarm_description mujoco_sim.launch.py use_rviz:=false &
+LAUNCH_PID=$!
+sleep 5
+
+echo "Test 1: Check initial state"
+ros2 control list_controllers | grep "joint_trajectory_controller.*active" && echo "✅ Position active" || exit 1
+
+echo "Test 2: Switch to velocity"
+ros2 control switch_controllers --activate velocity_controller --deactivate joint_trajectory_controller
+sleep 1
+ros2 control list_controllers | grep "velocity_controller.*active" && echo "✅ Velocity active" || exit 1
+
+echo "Test 3: Switch to effort"
+ros2 control switch_controllers --activate effort_controller --deactivate velocity_controller
+sleep 1
+ros2 control list_controllers | grep "effort_controller.*active" && echo "✅ Effort active" || exit 1
+
+echo "Test 4: Switch back to position"
+ros2 control switch_controllers --activate joint_trajectory_controller --deactivate effort_controller
+sleep 1
+ros2 control list_controllers | grep "joint_trajectory_controller.*active" && echo "✅ Position active" || exit 1
+
+echo "=== All tests passed! ==="
+
+# Cleanup
+kill $LAUNCH_PID
+```
+
+Run with:
+
+```bash
+chmod +x test_controller_switching.sh
+./test_controller_switching.sh
 ```
 
 ---
@@ -676,46 +676,79 @@ Where:
 </hardware>
 ```
 
-**How Dynamic Switching Works:**
+**How Dynamic Switching Works (Updated November 2025):**
+
+Uses proper ros2_control API callbacks for instant, explicit controller switching:
 
 ```cpp
-// In MujocoSystem::write()
-// 1. Detect active controller (command changed from initial value)
-if (abs(position_command - initial_position_command) > threshold) {
-  position_command_active = true;
+// Phase 1: Controller Manager calls prepare_command_mode_switch()
+// Validates that the requested switch is possible
+hardware_interface::return_type prepare_command_mode_switch(
+  const std::vector<std::string> &start_interfaces,  // e.g., ["joint1/velocity", ...]
+  const std::vector<std::string> &stop_interfaces)   // e.g., ["joint1/position", ...]
+{
+  // Validate interfaces exist
+  // Return OK to proceed, or ERROR to abort
+  return hardware_interface::return_type::OK;
 }
 
-// 2. Apply ONLY the active controller
+// Phase 2: Controller Manager calls perform_command_mode_switch()
+// Executes the actual switch
+hardware_interface::return_type perform_command_mode_switch(...)
+{
+  // Parse interface names and update active flags
+  for (auto &interface : stop_interfaces) {
+    if (interface_type == "position")
+      position_command_active = false;
+  }
+  for (auto &interface : start_interfaces) {
+    if (interface_type == "velocity") {
+      velocity_command_active = true;
+      position_command_active = false;  // Mutual exclusion
+    }
+  }
+  return hardware_interface::return_type::OK;
+}
+
+// In MujocoSystem::write() - Apply ONLY the active controller
 bool apply_position = is_position_control_enabled &&
                       (control_mode == "position" ||
                        (control_mode == "all" && position_command_active &&
                         !velocity_command_active && !effort_command_active));
 
 if (apply_position) {
-  // Compute PID and apply torque
   tau = Kp * (q_des - q) + Kd * (dq_des - dq);
   qfrc_applied[i] = tau;
 }
 ```
 
+**Key Improvements (November 2025 Update):**
+
+- ✅ **Instant switching** - No timeout detection needed, callbacks fire immediately
+- ✅ **Explicit state tracking** - Controller manager tells us exactly what changed
+- ✅ **Proper ros2_control API** - Follows hardware_interface::SystemInterface contract
+- ✅ **Clean implementation** - ~50 lines vs previous ~70 lines of timeout logic
+- ✅ **Simulation timing fix** - `mj_step1()` called before reading time (correct clock sync)
+- ✅ **Thread-safe clock** - Monotonic guarantee prevents RViz resets
+
 **Why This Works:**
 
 - Without custom fork: All three interfaces write to joints → conflicts
-- With custom fork: Detects active interface → only applies that one
-- Enables seamless switching without URDF changes
+- With custom fork: Receives explicit signals from controller manager
+- Enables seamless switching with zero delay
 
 ### Launch File Behavior
 
 **What `mujoco_sim.launch.py` does:**
 
-1. **Generate URDF** with `use_mujoco:=true` and `control_mode:=all`
+1. **Generate URDF** with `use_mujoco:=true` and `control_mode:=all` (hardcoded)
 2. **Start MuJoCo node** with **ALL THREE** controller configs loaded
 3. **Load ALL THREE controllers as INACTIVE:**
    - `joint_trajectory_controller` (position)
    - `velocity_controller` (velocity)
    - `effort_controller` (effort)
-4. **Activate ONLY the one specified by `control_mode` parameter**
-5. User can switch at runtime without restart
+4. **Activate position controller by default** (`joint_trajectory_controller`)
+5. **User can switch at runtime** using `ros2 control switch_controllers`
 
 **Controller Config Loading:**
 
@@ -730,7 +763,7 @@ parameters=[
 ]
 ```
 
-All configs are loaded into the controller manager's parameter space, enabling dynamic switching.
+All configs are loaded into the controller manager's parameter space, enabling seamless dynamic switching without restarting the simulation.
 
 ---
 
@@ -824,41 +857,35 @@ openarm_description/
 
 ## Troubleshooting
 
-### Problem: MuJoCo model not found
+**For common setup issues**, see the troubleshooting section in [`docs/ZORDI_README.md`](ZORDI_README.md)
+
+### Quick Fixes
+
+**MuJoCo model not found:**
 
 ```bash
 cd ~/ros2_ws/src/openarm_description
 python3 scripts/urdf_to_mjcf.py --arm-type v10 --output mujoco_models/openarm_v10.xml
 ```
 
-### Problem: Symbol lookup error when loading controllers
+**Symbol lookup error:**
 
 ```bash
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
-# Then launch
+ros2 launch openarm_description mujoco_sim.launch.py
 ```
 
-### Problem: Robot falls under gravity in effort control
-
-**Solution:** Start gravity compensation controller
+**Robot falls in effort control:**
 
 ```bash
 python3 scripts/gravity_compensation_controller.py
 ```
 
-### Problem: Controllers not switching
-
-**Check controller status:**
+**Controllers not switching:**
 
 ```bash
-ros2 control list_controllers
-```
-
-**Verify custom fork installed:**
-
-```bash
-ros2 pkg list | grep mujoco_ros2_control
-# Should show custom fork, not upstream version
+ros2 control list_controllers  # Check status
+# Verify custom fork: see ZORDI_README.md
 ```
 
 ### Problem: Position control oscillates / unstable
@@ -901,12 +928,14 @@ python3 scripts/test_mujoco_setup.py
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
 | `arm_type` | string | `v10` | ARM type |
-| `control_mode` | string | `position` | Initial controller: `position`, `velocity`, `effort` |
 | `hand` | bool | `false` | Include hand/gripper |
 | `bimanual` | bool | `false` | Bimanual configuration |
 | `use_rviz` | bool | `true` | Launch RViz |
+| `rviz_config` | string | (auto) | Path to RViz config file |
 | `use_sim_time` | bool | `true` | Use simulation time |
 | `mujoco_model_path` | string | (auto) | Override MuJoCo model path |
+
+**Note:** The `control_mode` parameter is no longer supported as a launch argument. All three controllers (position, velocity, effort) are loaded at startup with the position controller active by default. Use `ros2 control switch_controllers` to change modes at runtime.
 
 ### ROS2 Topics
 
@@ -988,6 +1017,13 @@ Tests:
 ---
 
 ## Additional Resources
+
+### Documentation
+
+- **Setup & Installation Guide:** [`docs/ZORDI_README.md`](ZORDI_README.md) - Complete setup instructions, troubleshooting, and usage guide
+- **Torque Control vs Actuators:** [`docs/torque_vs_actuator_control.md`](torque_vs_actuator_control.md) - Deep dive on direct torque control vs MuJoCo actuators
+
+### External Resources
 
 - **Custom mujoco_ros2_control Fork:** <https://github.com/zordicom/mujoco_ros2_control> (branch: `2025-11-control-interface`, commit: `5a1e443`)
 - **MuJoCo Documentation:** <https://mujoco.readthedocs.io/>

@@ -29,7 +29,12 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(DIRECTORY launch meshes rviz urdf config
+install(DIRECTORY launch meshes rviz urdf config mujoco_models
         DESTINATION share/${PROJECT_NAME})
+
+# Install Python scripts
+install(PROGRAMS
+        scripts/mujoco_passive_viewer.py
+        DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
