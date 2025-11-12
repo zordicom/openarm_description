@@ -21,8 +21,7 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-            <!-- Always use "all" mode to enable dynamic controller switching -->
-            <param name="control_mode">all</param>
+            <!-- No control_mode parameter - mode switches automatically based on active controller -->
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->
@@ -56,20 +55,10 @@
           </xacro:if>
 
           <!-- Command Interfaces -->
-          <xacro:if value="${use_mujoco}">
-            <!-- MuJoCo mode: Use _pid suffix to enable PID-based control
-                 This converts position/velocity commands to torques via PID,
-                 preventing simulation instability from direct qpos/qvel setting -->
-            <command_interface name="position_pid"/>
-            <command_interface name="velocity_pid"/>
-            <command_interface name="effort"/>
-          </xacro:if>
-          <xacro:unless value="${use_mujoco}">
-            <!-- Real/Fake hardware: Expose all interfaces -->
-            <command_interface name="position"/>
-            <command_interface name="velocity"/>
-            <command_interface name="effort"/>
-          </xacro:unless>
+          <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
+          <command_interface name="position"/>
+          <command_interface name="velocity"/>
+          <command_interface name="effort"/>
 
           <!-- State Interfaces -->
           <state_interface name="position">

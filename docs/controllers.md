@@ -21,12 +21,16 @@
 
 ### Key Takeaways
 
-1. **Standard ROS2 `joint_trajectory_controller` does NOT support sending position, velocity, and effort simultaneously** - only specific combinations
-2. **Feedforward effort** is much more than gravity compensation - includes inertia, Coriolis, and friction
-3. **Controllers are parallel, not stacked** - CartesianController writes directly to hardware, not through JointTrajectoryController
-4. **Use the right controller for the job:**
-   - **JointTrajectoryController**: Pre-planned paths, works with MoveIt planning
-   - **CartesianController (crisp_controllers)**: Real-time Cartesian control with full dynamics compensation
+1. **Standard ROS2 `joint_trajectory_controller` does NOT support position + velocity + effort simultaneously**
+2. **zordi_mit_controller provides full MIT mode** - position + velocity + effort together
+3. **Feedforward effort** includes gravity, inertia, Coriolis, and friction
+4. **Controllers are parallel** - write directly to hardware interfaces
+5. **Mode switching is automatic** - hardware adapts based on active controller
+6. **Use the right controller:**
+   - **joint_trajectory_controller**: Basic trajectories (position_servo mode)
+   - **zordi_mit_controller**: Gravity-comp trajectories (full MIT mode)
+   - **effort_controller**: Pure torque (MIT with Kp=0, Kd=0)
+   - **CartesianController**: Cartesian control with full dynamics
 
 ---
 

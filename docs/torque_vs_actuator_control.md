@@ -19,31 +19,33 @@
 
 ## Quick Summary
 
-### What We Do: Direct Torque Application (qfrc_applied)
+### Primary: Direct Torque Application (qfrc_applied) - MIT Mode
 
 ```cpp
-// In mujoco_ros2_control
+// In mujoco_ros2_control - MIT mode
 mj_data->qfrc_applied[joint_idx] = computed_torque;
 ```
 
 - Write torques directly to MuJoCo's generalized force array
-- Bypasses actuator model entirely
+- Used for full MIT mode control
 - Force enters directly into forward dynamics equation
 
-### What We DON'T Do: MJCF Actuator Inputs (ctrl)
+### Secondary: MJCF Actuator Inputs (ctrl) - Position Servo Mode
 
 ```cpp
-// NOT used in our implementation
-mj_data->ctrl[actuator_idx] = desired_command;
+// In mujoco_ros2_control - position_servo mode
+mj_data->ctrl[actuator_idx] = position_command;
 ```
 
-- Would go through MuJoCo's actuator model
-- Actuator generates forces based on transfer function
-- More realistic motor dynamics, but adds complexity
+- Uses MuJoCo's built-in position actuators (kp=50000)
+- Triggered when joint_trajectory_controller active
+- Provides comparison with firmware-controlled Position Mode
+
+**We use BOTH approaches with dynamic switching!**
 
 ### Key Point
 
-**Generated MJCF files have NO `<actuator>` section** - auto-removed during conversion since we use `qfrc_applied` instead of `ctrl[]`.
+**Generated MJCF files INCLUDE `<actuator>` section** - position actuators with kp=50000 for position_servo mode. We use BOTH qfrc_applied (MIT mode) and ctrl (position_servo mode) with dynamic switching.
 
 ---
 
@@ -317,33 +319,28 @@ The `urdf2mjcf` converter automatically generates `<actuator>` elements for all 
 ### Implementation in `urdf_to_mjcf.py`
 
 ```python
-def fix_mjcf_mesh_paths(mjcf_path, mesh_dir):
-    """Post-process MJCF file to fix paths and remove actuators."""
-    tree = ET.parse(mjcf_path)
-    root = tree.getroot()
+def add_position_actuators(root, joint_limits, kp=50000.0, kv=200.0):
+    """Add high-gain position actuators for position_servo mode."""
+    actuator_elem = ET.SubElement(root, "actuator")
 
-    # Remove auto-generated actuators (we use qfrc_applied, not ctrl)
-    for actuator in root.findall(".//actuator"):
-        root.remove(actuator)
-        print("✓ Removed auto-generated actuators (using qfrc_applied instead)")
-
-    # Remove actuator sensors (since actuators are removed)
-    sensor_elem = root.find(".//sensor")
-    if sensor_elem is not None:
-        for sensor in list(sensor_elem):
-            if sensor.tag in ["actuatorpos", "actuatorvel", "actuatorfrc"]:
-                sensor_elem.remove(sensor)
-
-    tree.write(mjcf_path)
+    for joint_name, limits in joint_limits.items():
+        ET.SubElement(actuator_elem, "position",
+            name=f"actuator_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            kp=str(kp),    # High stiffness (firmware-like)
+            kv=str(kv),    # Damping
+            ctrlrange=f"{limits['lower']} {limits['upper']}",
+            forcerange=f"-{limits['effort']} {limits['effort']}"
+        )
 ```
 
 ### Result
 
 When you run `python3 scripts/urdf_to_mjcf.py`, the output MJCF has:
 
-- ✅ NO `<actuator>` section
-- ✅ NO actuator sensors (actuatorpos, actuatorvel, actuatorfrc)
-- ✅ Clean MJCF showing direct torque control
+- ✅ Position actuators with kp=50000 (high stiffness)
+- ✅ Proper force limits per joint (40/27/7 Nm)
+- ✅ Supports both direct torque (MIT) and actuators (position_servo)
 
 ### Regenerate Clean MJCF Files
 

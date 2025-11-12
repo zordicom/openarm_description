@@ -210,19 +210,19 @@ python3 scripts/urdf_to_mjcf.py --arm-type v10 --bimanual --output mujoco_models
 
 ### Launch MuJoCo Simulation
 
-**Basic launch** (starts with position control active):
+**Basic launch** (starts with trajectory controller active):
 
 ```bash
 export LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
-ros2 launch openarm_description mujoco_sim.launch.py
+ros2 launch openarm_description single_arm.launch.py
 ```
 
 This launches:
 
-- MuJoCo physics simulation
-- **Position controller** (active by default)
-- Velocity controller (inactive, can switch at runtime)
-- Effort controller (inactive, can switch at runtime)
+- MuJoCo physics simulation with dynamic mode switching
+- **joint_trajectory_controller** (active by default - position_servo mode)
+- effort_controller (inactive - pure torque)
+- zordi_mit_controller (inactive - full MIT mode)
 - Joint state broadcaster
 - RViz visualization
 

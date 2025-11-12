@@ -92,6 +92,48 @@ def disable_gravity_in_mjcf(mjcf_path: Path) -> None:
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
 
 
+def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=200.0):
+    """Add MuJoCo position actuators for each joint with high stiffness.
+
+    Args:
+        root: XML root element
+        joint_limits_dict: Dictionary of joint limits from YAML
+        kp: Position gain (stiffness) - default 50000 for firmware-like behavior
+        kv: Velocity gain (damping) - default 200 for stable response
+
+    Returns:
+        ET.Element: The actuator element
+    """
+    import xml.etree.ElementTree as ET
+
+    # Create actuator element
+    actuator_elem = ET.SubElement(root, "actuator")
+
+    num_actuators = 0
+    for joint_name, joint_data in joint_limits_dict.items():
+        if not joint_name.startswith("joint"):
+            continue  # Skip non-joint entries (like gripper)
+
+        limits = joint_data.get("limit", {})
+        lower = limits.get("lower", -3.14)
+        upper = limits.get("upper", 3.14)
+        effort = limits.get("effort", 40.0)
+
+        # Create position actuator with high gains
+        ET.SubElement(actuator_elem, "position",
+            name=f"actuator_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            kp=str(kp),
+            kv=str(kv),
+            ctrlrange=f"{lower} {upper}",
+            forcerange=f"-{effort} {effort}"
+        )
+        num_actuators += 1
+
+    print(f"✓ Added {num_actuators} position actuators (kp={kp}, kv={kv}, firmware-like gains)")
+    return actuator_elem
+
+
 def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
     """Fix mesh file paths in the generated MJCF to match copied mesh locations.
 
@@ -122,10 +164,9 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
         for freejoint in body.findall("./freejoint[@name='root']"):
             body.remove(freejoint)
 
-    # Remove auto-generated actuators (we use qfrc_applied, not ctrl)
-    for actuator in root.findall(".//actuator"):
-        root.remove(actuator)
-        print("✓ Removed auto-generated actuators (using qfrc_applied instead)")
+    # Remove auto-generated actuators (we'll add custom ones with proper gains)
+    for actuator_elem in root.findall(".//actuator"):
+        root.remove(actuator_elem)
 
     # Remove actuator sensors (since actuators are removed)
     sensor_elem = root.find(".//sensor")
@@ -172,6 +213,39 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
     # Save the updated MJCF
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
     print("✓ Fixed mesh paths in MJCF")
+
+
+def add_actuators_to_mjcf(mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=200.0) -> None:
+    """Add position actuators to MJCF file after conversion.
+
+    Args:
+        mjcf_path: Path to MJCF file
+        joint_limits_path: Path to joint limits YAML file
+        kp: Position actuator gain (default: 50000 for high stiffness)
+        kv: Velocity actuator gain (default: 200 for damping)
+    """
+    import xml.etree.ElementTree as ET
+    import yaml
+
+    if not joint_limits_path.exists():
+        print(f"Warning: Joint limits file not found: {joint_limits_path}")
+        print("  Skipping actuator generation")
+        return
+
+    # Load joint limits
+    with open(joint_limits_path) as f:
+        joint_limits = yaml.safe_load(f)
+
+    # Parse MJCF
+    tree = ET.parse(mjcf_path)
+    root = tree.getroot()
+
+    # Add actuators
+    add_position_actuators(root, joint_limits, kp, kv)
+
+    # Write back
+    tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
+    print(f"✓ Added position actuators to {mjcf_path.name}")
 
 
 def convert_urdf_to_mjcf(urdf_str: str, output_path: Path) -> None:
@@ -374,6 +448,18 @@ def main():
         action="store_true",
         help="Disable gravity in the generated MJCF (useful for PID tuning)",
     )
+    parser.add_argument(
+        "--actuator-kp",
+        type=float,
+        default=50000.0,
+        help="Position actuator stiffness gain (default: 50000 for firmware-like behavior)",
+    )
+    parser.add_argument(
+        "--actuator-kv",
+        type=float,
+        default=200.0,
+        help="Position actuator damping gain (default: 200 for stable response)",
+    )
 
     args = parser.parse_args()
 
@@ -409,6 +495,10 @@ def main():
         # Step 4: Apply custom simulation parameters (if provided)
         if args.sim_params:
             apply_simulation_parameters(args.output, args.sim_params)
+
+        # Step 5: Add position actuators with high gains (for position_servo mode)
+        joint_limits_path = args.package_path / "config" / "arm" / args.arm_type / "joint_limits.yaml"
+        add_actuators_to_mjcf(args.output, joint_limits_path, args.actuator_kp, args.actuator_kv)
 
         print(f"\n✓ Conversion complete: {args.output}")
 
