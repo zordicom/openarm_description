@@ -76,11 +76,12 @@
         </joint>
       </xacro:macro>
 
-      <!-- PID gains: Much lower to avoid exceeding actuator limits (40 Nm for joints 1-2, 27 for 3-4, 7 for 5-7) -->
+      <!-- PID gains: Tuned to work within torque limits -->
+      <!-- Initial positions: Stable hanging configuration (not upright/unstable) -->
       <xacro:configure_joint joint_name="openarm_${arm_prefix}joint1" initial_position="0.0" kp="20.0" kd="2.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint2" initial_position="0.0" kp="20.0" kd="2.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint2" initial_position="-0.785" kp="20.0" kd="2.0" ki="0.0"/>
       <xacro:configure_joint joint_name="openarm_${arm_prefix}joint3" initial_position="0.0" kp="15.0" kd="1.5" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint4" initial_position="0.0" kp="15.0" kd="1.5" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint4" initial_position="1.57" kp="15.0" kd="1.5" ki="0.0"/>
       <xacro:configure_joint joint_name="openarm_${arm_prefix}joint5" initial_position="0.0" kp="5.0" kd="0.5" ki="0.0"/>
       <xacro:configure_joint joint_name="openarm_${arm_prefix}joint6" initial_position="0.0" kp="5.0" kd="0.5" ki="0.0"/>
       <xacro:configure_joint joint_name="openarm_${arm_prefix}joint7" initial_position="0.0" kp="5.0" kd="0.5" ki="0.0"/>

@@ -59,11 +59,12 @@ joint_trajectory_controller:
     allow_integration_in_goal_trajectories: true
 
     # Tolerances
+    # With velocity damping fix, oscillations should be eliminated
     constraints:
-      stopped_velocity_tolerance: 0.01  # rad/s
-      goal_time: 0.0  # No time constraint
+      stopped_velocity_tolerance: 0.05  # rad/s
+      goal_time: 0.5  # Allow 0.5s settling time after trajectory
 
-    # Per-joint tolerances
+    # Per-joint position tolerances (rad)
     openarm_joint1: {trajectory: 0.05, goal: 0.01}
     openarm_joint2: {trajectory: 0.05, goal: 0.01}
     openarm_joint3: {trajectory: 0.05, goal: 0.01}

@@ -2,25 +2,36 @@
 """
 Copyright 2025 Zordi, Inc. All rights reserved.
 
-Test script for comparing position_pid vs direct position control modes.
+Test script for joint_trajectory_controller with real-time synchronized motion.
 
-This script sends a simple trajectory from all-zeros to all-ones (1 radian)
-over 5 seconds, starting and ending at zero velocity.
+After fixing the simulation timing (mujoco_ros2_control_node.cpp), trajectories
+now execute at correct wall-clock time!
+
+This script sends a trajectory from 0 to target angle over specified duration.
+
+⚠️  NOTE: Joint5-7 have 7 Nm torque limits. Use target ≤ 0.5 rad to avoid
+    saturation at extended configurations.
 
 Usage:
-    # Test PID mode (requires position_control_mode:=pid)
-    python3 scripts/test_position_modes.py --mode pid
+    # Test with safe angles (default: 0.5 rad, 10s)
+    python3 scripts/test_position_modes.py
 
-    # Test direct mode (requires position_control_mode:=direct)
-    python3 scripts/test_position_modes.py --mode direct
+    # Custom target angle (radians)
+    python3 scripts/test_position_modes.py --target 0.3
 
-    # Custom trajectory duration
-    python3 scripts/test_position_modes.py --mode pid --duration 10.0
+    # Custom duration (seconds)
+    python3 scripts/test_position_modes.py --duration 5.0
+
+    # Combined
+    python3 scripts/test_position_modes.py --target 0.5 --duration 10.0
+
+    # Launch simulation first:
+    ros2 launch openarm_description single_arm.launch.py \
+        default_controller:=joint_trajectory_controller
 """
 
 import argparse
 import sys
-from typing import List
 
 import rclpy
 from builtin_interfaces.msg import Duration
@@ -31,48 +42,37 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 
 class TrajectoryTester(Node):
-    """Node to send test trajectories to JointTrajectoryController."""
+    """Node to send test trajectories to joint_trajectory_controller."""
 
-    def __init__(self, mode: str = "pid"):
-        """Initialize the trajectory tester node.
-
-        Args:
-            mode: Control mode ('pid' or 'direct')
-        """
+    def __init__(self):
+        """Initialize the trajectory tester node."""
         super().__init__("trajectory_tester")
 
-        # Determine controller name based on mode
-        if mode == "pid":
-            controller_name = "pid_trajectory_controller"
-        elif mode == "direct":
-            controller_name = "position_trajectory_controller"
-        else:
-            self.get_logger().error(f"Invalid mode: {mode}. Use 'pid' or 'direct'")
-            raise ValueError(f"Invalid mode: {mode}")
-
-        self.mode = mode
-        self.controller_name = controller_name
+        self.controller_name = "joint_trajectory_controller"
 
         # Create action client
-        self._action_client = ActionClient(
-            self, FollowJointTrajectory, f"/{controller_name}/follow_joint_trajectory"
-        )
+        action_topic = f"/{self.controller_name}/follow_joint_trajectory"
+        self._action_client = ActionClient(self, FollowJointTrajectory, action_topic)
 
         self.get_logger().info(
-            f"Trajectory tester initialized for {mode} mode "
-            f"(controller: {controller_name})"
+            f"Trajectory tester initialized (controller: {self.controller_name})"
         )
 
-    def create_zero_to_one_trajectory(self, duration: float = 30.0) -> JointTrajectory:
-        """Create a simple trajectory from 0 to 1 radian for all joints.
+    def create_zero_to_one_trajectory(
+        self, duration: float = 10.0, target_angle: float = 1.0
+    ) -> JointTrajectory:
+        """Create a simple trajectory from 0 to target_angle for all joints.
 
         Args:
-            duration: Trajectory duration in seconds (default: 30.0)
+            duration: Trajectory duration in seconds (default: 10.0)
+            target_angle: Target angle in radians (default: 1.0)
 
         Returns:
             JointTrajectory message
         """
-        self.get_logger().info(f"Creating trajectory with duration={duration} seconds")
+        self.get_logger().info(
+            f"Creating trajectory with duration={duration}s, target={target_angle} rad"
+        )
         trajectory = JointTrajectory()
 
         # Joint names for OpenArm v10
@@ -94,9 +94,9 @@ class TrajectoryTester(Node):
         point_start.velocities = [0.0] * num_joints
         point_start.time_from_start = Duration(sec=0, nanosec=0)
 
-        # Waypoint 2: End at ones with zero velocity (smooth stop)
+        # Waypoint 2: End at target_angle with zero velocity (smooth stop)
         point_end = JointTrajectoryPoint()
-        point_end.positions = [1.0] * num_joints
+        point_end.positions = [target_angle] * num_joints
         point_end.velocities = [0.0] * num_joints
 
         # Create Duration - be explicit about conversion
@@ -104,22 +104,26 @@ class TrajectoryTester(Node):
         duration_nanosec = int((duration - float(duration_sec)) * 1_000_000_000)
         point_end.time_from_start = Duration(sec=duration_sec, nanosec=duration_nanosec)
 
+        total_time = duration_sec + duration_nanosec / 1e9
         self.get_logger().info(
             f"Waypoint timing: sec={duration_sec}, nanosec={duration_nanosec}, "
-            f"total={duration_sec + duration_nanosec / 1e9:.3f}s"
+            f"total={total_time:.3f}s"
         )
 
         trajectory.points = [point_start, point_end]
 
         self.get_logger().info(
-            f"Created trajectory: 0→1 rad in {duration}s for {num_joints} joints"
+            f"Created trajectory: 0→{target_angle} rad in {duration}s "
+            f"for {num_joints} joints"
         )
         self.get_logger().info(
             f"  Start: positions={point_start.positions}, "
             f"velocities={point_start.velocities}"
         )
+        end_time_sec = point_end.time_from_start.sec
+        end_time_nsec = point_end.time_from_start.nanosec
         self.get_logger().info(
-            f"  End (t={point_end.time_from_start.sec}.{point_end.time_from_start.nanosec}s): "
+            f"  End (t={end_time_sec}.{end_time_nsec}s): "
             f"positions={point_end.positions}, velocities={point_end.velocities}"
         )
 
@@ -134,19 +138,18 @@ class TrajectoryTester(Node):
         Returns:
             True if trajectory was accepted, False otherwise
         """
-        self.get_logger().info(
-            f"Waiting for action server: /{self.controller_name}/follow_joint_trajectory"
-        )
+        action_topic = f"/{self.controller_name}/follow_joint_trajectory"
+        self.get_logger().info(f"Waiting for action server: {action_topic}")
 
         if not self._action_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error(
                 f"Action server /{self.controller_name}/follow_joint_trajectory "
                 "not available after 5 seconds"
             )
-            self.get_logger().error("\nMake sure you launched with the correct mode:")
+            self.get_logger().error("\nMake sure you launched the simulation:")
             self.get_logger().error(
-                f"  ros2 launch openarm_description single_arm.launch.py "
-                f"position_control_mode:={self.mode}"
+                "  ros2 launch openarm_description single_arm.launch.py "
+                "default_controller:=joint_trajectory_controller"
             )
             return False
 
@@ -187,40 +190,39 @@ class TrajectoryTester(Node):
 def main():
     """Main entry point for trajectory testing."""
     parser = argparse.ArgumentParser(
-        description="Test position control modes with 0→1 trajectory"
-    )
-    parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["pid", "direct"],
-        default="pid",
-        help="Control mode: 'pid' (position_pid) or 'direct' (position)",
+        description="Test joint_trajectory_controller with trajectory"
     )
     parser.add_argument(
         "--duration",
         type=float,
-        default=30.0,
-        help="Trajectory duration in seconds (default: 30.0)",
+        default=10.0,
+        help="Trajectory duration in seconds (default: 10.0)",
+    )
+    parser.add_argument(
+        "--target",
+        type=float,
+        default=0.5,
+        help="Target angle in radians (default: 0.5, safe for all joints)",
     )
 
     args = parser.parse_args()
 
     print("\n" + "=" * 60)
-    print("OpenArm Position Control Mode Test")
+    print("OpenArm joint_trajectory_controller Test")
     print("=" * 60)
-    print(f"Mode: {args.mode}")
+    print("Controller: joint_trajectory_controller")
+    print("Mode: position_servo (auto-triggered)")
     print(f"Duration: {args.duration}s")
-    print("Trajectory: 0.0 → 1.0 rad (all joints)")
+    print(f"Trajectory: 0.0 → {args.target} rad (all joints)")
     print("=" * 60 + "\n")
 
     rclpy.init()
 
     try:
-        print(
-            f"Python received: mode={args.mode}, duration={args.duration} (type={type(args.duration)})"
+        tester = TrajectoryTester()
+        trajectory = tester.create_zero_to_one_trajectory(
+            duration=args.duration, target_angle=args.target
         )
-        tester = TrajectoryTester(mode=args.mode)
-        trajectory = tester.create_zero_to_one_trajectory(duration=args.duration)
         success = tester.send_trajectory(trajectory)
 
         if success:

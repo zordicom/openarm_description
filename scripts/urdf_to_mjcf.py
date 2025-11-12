@@ -92,14 +92,14 @@ def disable_gravity_in_mjcf(mjcf_path: Path) -> None:
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
 
 
-def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=200.0):
+def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=5000.0):
     """Add MuJoCo position actuators for each joint with high stiffness.
 
     Args:
         root: XML root element
         joint_limits_dict: Dictionary of joint limits from YAML
         kp: Position gain (stiffness) - default 50000 for firmware-like behavior
-        kv: Velocity gain (damping) - default 200 for stable response
+        kv: Velocity gain (damping) - default 5000 for heavy damping (eliminates oscillations)
 
     Returns:
         ET.Element: The actuator element
@@ -215,14 +215,14 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
     print("✓ Fixed mesh paths in MJCF")
 
 
-def add_actuators_to_mjcf(mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=200.0) -> None:
+def add_actuators_to_mjcf(mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=5000.0) -> None:
     """Add position actuators to MJCF file after conversion.
 
     Args:
         mjcf_path: Path to MJCF file
         joint_limits_path: Path to joint limits YAML file
         kp: Position actuator gain (default: 50000 for high stiffness)
-        kv: Velocity actuator gain (default: 200 for damping)
+        kv: Velocity actuator gain (default: 5000 for heavy damping)
     """
     import xml.etree.ElementTree as ET
     import yaml
@@ -452,13 +452,13 @@ def main():
         "--actuator-kp",
         type=float,
         default=50000.0,
-        help="Position actuator stiffness gain (default: 50000 for firmware-like behavior)",
+        help="Position actuator stiffness gain (default: 50000 for DAMIAO Position Mode)",
     )
     parser.add_argument(
         "--actuator-kv",
         type=float,
-        default=200.0,
-        help="Position actuator damping gain (default: 200 for stable response)",
+        default=5000.0,
+        help="Position actuator damping gain (default: 5000 for heavy damping)",
     )
 
     args = parser.parse_args()
