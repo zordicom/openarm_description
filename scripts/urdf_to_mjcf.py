@@ -2,21 +2,28 @@
 """
 Copyright 2025 Zordi, Inc. All rights reserved.
 
-Script to convert OpenARM URDF to MuJoCo MJCF format.
+Comprehensive build script to convert OpenARM xacro → URDF → MuJoCo XML.
 
 This script:
 1. Generates URDF from xacro with MuJoCo-specific settings
 2. Converts URDF to MJCF using MuJoCo's compile utility
 3. Optionally applies custom simulation parameters
 4. Validates the output MJCF file
+5. Can regenerate all common configurations at once
 
 Usage:
-    python3 urdf_to_mjcf.py --arm-type v10 --output openarm_v10.xml
-    python3 urdf_to_mjcf.py --arm-type v10 --bimanual --output openarm_v10_bimanual.xml
-    python3 urdf_to_mjcf.py --arm-type v10 --hand --output openarm_v10_with_hand.xml
+    # Build all common configurations
+    python3 urdf_to_mjcf.py --build-all
+
+    # Single configuration
+    python3 urdf_to_mjcf.py --arm-type v10 --output mujoco_models/openarm_v10.xml
+
+    # Build with specific options
+    python3 urdf_to_mjcf.py --arm-type v10 --bimanual --hand --output custom.xml
 """
 
 import argparse
+import math
 import os
 import subprocess
 import sys
@@ -115,22 +122,26 @@ def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=5000.0):
             continue  # Skip non-joint entries (like gripper)
 
         limits = joint_data.get("limit", {})
-        lower = limits.get("lower", -3.14)
-        upper = limits.get("upper", 3.14)
+        lower = limits.get("lower", -math.pi)
+        upper = limits.get("upper", math.pi)
         effort = limits.get("effort", 40.0)
 
         # Create position actuator with high gains
-        ET.SubElement(actuator_elem, "position",
+        ET.SubElement(
+            actuator_elem,
+            "position",
             name=f"actuator_openarm_{joint_name}",
             joint=f"openarm_{joint_name}",
             kp=str(kp),
             kv=str(kv),
             ctrlrange=f"{lower} {upper}",
-            forcerange=f"-{effort} {effort}"
+            forcerange=f"-{effort} {effort}",
         )
         num_actuators += 1
 
-    print(f"✓ Added {num_actuators} position actuators (kp={kp}, kv={kv}, firmware-like gains)")
+    print(
+        f"✓ Added {num_actuators} position actuators (kp={kp}, kv={kv}, firmware-like gains)"
+    )
     return actuator_elem
 
 
@@ -215,7 +226,9 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
     print("✓ Fixed mesh paths in MJCF")
 
 
-def add_actuators_to_mjcf(mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=5000.0) -> None:
+def add_actuators_to_mjcf(
+    mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=5000.0
+) -> None:
     """Add position actuators to MJCF file after conversion.
 
     Args:
@@ -225,6 +238,7 @@ def add_actuators_to_mjcf(mjcf_path: Path, joint_limits_path: Path, kp=50000.0, 
         kv: Velocity actuator gain (default: 5000 for heavy damping)
     """
     import xml.etree.ElementTree as ET
+
     import yaml
 
     if not joint_limits_path.exists():
@@ -398,16 +412,196 @@ def apply_simulation_parameters(mjcf_path: Path, sim_params_path: Path = None) -
     print("  (Custom parameter application not yet implemented)")
 
 
+def build_configuration(
+    arm_type: str,
+    output_xml: Path,
+    output_urdf: Path,
+    bimanual: bool = False,
+    hand: bool = False,
+    no_gravity: bool = False,
+    actuator_kp: float = 50000.0,
+    actuator_kv: float = 5000.0,
+    package_path: Path = None,
+):
+    """Build a single configuration: xacro → URDF → XML.
+
+    Args:
+        arm_type: Arm type (e.g., 'v10')
+        output_xml: Path for MuJoCo XML file
+        output_urdf: Path for URDF file
+        bimanual: Whether to generate bimanual configuration
+        hand: Whether to include hand/gripper
+        no_gravity: Whether to disable gravity
+        actuator_kp: Position actuator gain
+        actuator_kv: Velocity actuator gain
+        package_path: Path to package root
+    """
+    config_name = output_xml.stem
+    print(f"\n{'=' * 80}")
+    print(f"Building: {config_name}")
+    print(f"{'=' * 80}")
+
+    # Step 1: Generate URDF from xacro
+    urdf_str = generate_urdf_from_xacro(
+        arm_type=arm_type, bimanual=bimanual, hand=hand, package_path=package_path
+    )
+
+    # Step 2: Save URDF file
+    output_urdf.parent.mkdir(parents=True, exist_ok=True)
+    output_urdf.write_text(urdf_str)
+    print(f"✓ Saved URDF: {output_urdf}")
+
+    # Step 3: Convert URDF to MuJoCo XML
+    output_xml.parent.mkdir(parents=True, exist_ok=True)
+    convert_urdf_to_mjcf(urdf_str, output_xml)
+
+    # Step 4: Disable gravity if requested
+    if no_gravity:
+        print("  Disabling gravity...")
+        disable_gravity_in_mjcf(output_xml)
+
+    # Step 5: Add position actuators
+    joint_limits_path = package_path / "config" / "arm" / arm_type / "joint_limits.yaml"
+    add_actuators_to_mjcf(output_xml, joint_limits_path, actuator_kp, actuator_kv)
+
+    print(f"✓ Complete: {config_name}\n")
+
+
+def build_all_configurations(
+    arm_type: str = "v10",
+    actuator_kp: float = 50000.0,
+    actuator_kv: float = 5000.0,
+    package_path: Path = None,
+):
+    """Build all common configurations.
+
+    Generates:
+    - openarm_v10.xml / openarm_v10.urdf (single arm)
+    - openarm_v10_no_gravity.xml (single arm, no gravity for tuning)
+    - openarm_v10_hand.xml / openarm_v10_hand.urdf (single arm + hand)
+    - openarm_v10_bimanual.xml / openarm_v10_bimanual.urdf (dual arm)
+    - openarm_v10_bimanual_hand.xml / openarm_v10_bimanual_hand.urdf (dual + hands)
+    """
+    if package_path is None:
+        package_path = Path(__file__).parent.parent
+
+    models_dir = package_path / "mujoco_models"
+
+    configurations = [
+        {
+            "name": "Single Arm",
+            "xml": models_dir / f"openarm_{arm_type}.xml",
+            "urdf": models_dir / f"openarm_{arm_type}.urdf",
+            "bimanual": False,
+            "hand": False,
+            "no_gravity": False,
+        },
+        {
+            "name": "Single Arm (No Gravity)",
+            "xml": models_dir / f"openarm_{arm_type}_no_gravity.xml",
+            "urdf": None,
+            "bimanual": False,
+            "hand": False,
+            "no_gravity": True,
+        },
+        {
+            "name": "Single Arm + Hand",
+            "xml": models_dir / f"openarm_{arm_type}_hand.xml",
+            "urdf": models_dir / f"openarm_{arm_type}_hand.urdf",
+            "bimanual": False,
+            "hand": True,
+            "no_gravity": False,
+        },
+        {
+            "name": "Bimanual",
+            "xml": models_dir / f"openarm_{arm_type}_bimanual.xml",
+            "urdf": models_dir / f"openarm_{arm_type}_bimanual.urdf",
+            "bimanual": True,
+            "hand": False,
+            "no_gravity": False,
+        },
+        {
+            "name": "Bimanual + Hands",
+            "xml": models_dir / f"openarm_{arm_type}_bimanual_hand.xml",
+            "urdf": models_dir / f"openarm_{arm_type}_bimanual_hand.urdf",
+            "bimanual": True,
+            "hand": True,
+            "no_gravity": False,
+        },
+    ]
+
+    print(f"\n{'=' * 80}")
+    print(f"Building ALL configurations for {arm_type}")
+    print(f"{'=' * 80}\n")
+
+    errors = []
+
+    for config in configurations:
+        try:
+            if config["no_gravity"]:
+                base_xml = models_dir / f"openarm_{arm_type}.xml"
+                if not base_xml.exists():
+                    print(f"⚠ Skipping {config['name']}: base file not found")
+                    continue
+
+                import shutil
+
+                shutil.copy(base_xml, config["xml"])
+                disable_gravity_in_mjcf(config["xml"])
+                print(f"✓ Created no-gravity variant: {config['xml'].name}\n")
+            else:
+                urdf_output = (
+                    config["urdf"] if config["urdf"] else models_dir / "temp.urdf"
+                )
+
+                build_configuration(
+                    arm_type=arm_type,
+                    output_xml=config["xml"],
+                    output_urdf=urdf_output,
+                    bimanual=config["bimanual"],
+                    hand=config["hand"],
+                    no_gravity=config["no_gravity"],
+                    actuator_kp=actuator_kp,
+                    actuator_kv=actuator_kv,
+                    package_path=package_path,
+                )
+
+                if config["urdf"] is None and urdf_output.exists():
+                    urdf_output.unlink()
+
+        except Exception as e:
+            error_msg = f"✗ Failed to build {config['name']}: {e}"
+            print(error_msg)
+            errors.append(error_msg)
+
+    print(f"\n{'=' * 80}")
+    if errors:
+        print(f"Build completed with {len(errors)} error(s):")
+        for error in errors:
+            print(f"  {error}")
+    else:
+        print("✓ All configurations built successfully!")
+    print(f"{'=' * 80}\n")
+
+    if errors:
+        sys.exit(1)
+
+
 def main():
     """Main conversion pipeline."""
     parser = argparse.ArgumentParser(
-        description="Convert OpenARM URDF to MuJoCo MJCF format"
+        description="Convert OpenARM xacro → URDF → MuJoCo XML"
     )
     parser.add_argument(
         "--arm-type",
         type=str,
         default="v10",
         help="ARM type (default: v10)",
+    )
+    parser.add_argument(
+        "--build-all",
+        action="store_true",
+        help="Build all common configurations (single, bimanual, with/without hand)",
     )
     parser.add_argument(
         "--bimanual",
@@ -423,8 +617,8 @@ def main():
         "--output",
         "-o",
         type=Path,
-        required=True,
-        help="Output MJCF file path",
+        required=False,
+        help="Output MJCF file path (required unless --build-all is used)",
     )
     parser.add_argument(
         "--package-path",
@@ -463,47 +657,64 @@ def main():
 
     args = parser.parse_args()
 
+    # Auto-detect package path if not provided
+    if args.package_path is None:
+        args.package_path = Path(__file__).parent.parent
+
+    # Handle validate-only mode
     if args.validate_only:
-        if not args.output.exists():
+        if not args.output or not args.output.exists():
             print(f"Error: File not found: {args.output}", file=sys.stderr)
             sys.exit(1)
         validate_mjcf(args.output)
         sys.exit(0)
 
-    # Auto-detect package path if not provided
-    if args.package_path is None:
-        args.package_path = Path(__file__).parent.parent
+    # Handle build-all mode
+    if args.build_all:
+        build_all_configurations(
+            arm_type=args.arm_type,
+            actuator_kp=args.actuator_kp,
+            actuator_kv=args.actuator_kv,
+            package_path=args.package_path,
+        )
+        sys.exit(0)
+
+    # Single configuration mode - require output
+    if not args.output:
+        print("Error: --output is required unless --build-all is used", file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
 
     try:
-        # Step 1: Generate URDF from xacro
-        urdf_str = generate_urdf_from_xacro(
+        # Generate URDF output path alongside XML
+        urdf_output = args.output.parent / args.output.name.replace(".xml", ".urdf")
+
+        # Build single configuration
+        build_configuration(
             arm_type=args.arm_type,
+            output_xml=args.output,
+            output_urdf=urdf_output,
             bimanual=args.bimanual,
             hand=args.hand,
+            no_gravity=args.no_gravity,
+            actuator_kp=args.actuator_kp,
+            actuator_kv=args.actuator_kv,
             package_path=args.package_path,
         )
 
-        # Step 2: Convert URDF to MJCF
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        convert_urdf_to_mjcf(urdf_str, args.output)
-
-        # Step 3: Disable gravity if requested (useful for PID tuning)
-        if args.no_gravity:
-            print("\nDisabling gravity...")
-            disable_gravity_in_mjcf(args.output)
-
-        # Step 4: Apply custom simulation parameters (if provided)
+        # Apply custom simulation parameters if provided
         if args.sim_params:
             apply_simulation_parameters(args.output, args.sim_params)
 
-        # Step 5: Add position actuators with high gains (for position_servo mode)
-        joint_limits_path = args.package_path / "config" / "arm" / args.arm_type / "joint_limits.yaml"
-        add_actuators_to_mjcf(args.output, joint_limits_path, args.actuator_kp, args.actuator_kv)
-
-        print(f"\n✓ Conversion complete: {args.output}")
+        print("\n✓ Build complete!")
+        print(f"  XML:  {args.output}")
+        print(f"  URDF: {urdf_output}")
 
     except Exception as e:
-        print(f"\n✗ Conversion failed: {e}", file=sys.stderr)
+        print(f"\n✗ Build failed: {e}", file=sys.stderr)
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
 
