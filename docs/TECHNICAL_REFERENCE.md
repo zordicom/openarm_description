@@ -181,13 +181,28 @@ Each joint has **three actuators** with specific naming:
 - **MuJoCo type**: `<position>`
 - **Control law**: `τ = kp*(ctrl - q) - kv*qd`
 - **When used**: Direct position control (Mode 1, 4)
-- **When neutralized**: Set `ctrl = q` (generates zero torque)
+- **When neutralized**: Set `ctrl = q` (generates zero torque **only if kv=0**)
 
 **Parameters**:
 - `kp`: Position gain (stiffness)
-- `kv`: Damping gain
+- `kv`: Damping gain (**MUST be 0.0 for MIT mode**)
 - `ctrlrange`: Control signal limits (position range)
 - `forcerange`: Torque limits
+
+**⚠️ IMPORTANT FOR MIT MODE**: Position actuators **must have `kv=0.0`** when used with MIT mode (effort + position/velocity control).
+
+**When is non-zero kv OK?**
+- ✅ When using **pure position control** (Mode 1, 4): `kv` provides desirable damping
+- ✅ Control law: `τ = kp*(pos_cmd - q) - kv*qd` (kv term is intentional)
+
+**When is non-zero kv problematic?**
+- ❌ When position actuator is **neutralized** (not actively used):
+  - Startup (no controller active yet)
+  - MIT mode (torque actuator in use, position actuator neutralized)
+- ❌ Control law becomes: `τ = kp*(q - q) - kv*qd = -kv*qd`
+- ❌ This produces unwanted velocity damping that interferes with torque control
+
+The system will warn if `kv ≠ 0` when position and effort interfaces are both exposed (MIT mode configuration).
 
 #### 2. Velocity Actuator
 - **MuJoCo type**: `<velocity>`
@@ -813,6 +828,35 @@ command_interfaces:
 **Solution**: 
 1. Enable gravity comp in YAML: `use_gravity_compensation: true`
 2. Ensure controller computes gravity in hold mode (see zordi_mit_controller implementation)
+
+### Problem: Unwanted damping in MIT mode
+
+**Symptoms**: 
+- Robot exhibits unexpected velocity damping when using effort-only control
+- Warning message: "Position actuator has kv=X.X but position interface is not active"
+
+**Cause**: Position actuator has non-zero `kv` when it should be neutralized
+
+**Explanation**: 
+When the position actuator is **actively used** for position control:
+```
+τ = kp*(pos_cmd - q) - kv*qd  ← kv provides desirable damping
+```
+
+But when **neutralized** (MIT mode or no active controller):
+```
+ctrl = q  →  τ = kp*(q - q) - kv*qd = -kv*qd  ← unwanted damping!
+```
+
+This velocity-dependent torque interferes with torque control.
+
+**Solution**: 
+- If using **only position control**: Non-zero `kv` is OK and beneficial
+- If using **MIT mode** (position + effort): Set `kv=0.0` in MuJoCo model:
+  ```xml
+  <position name="act_pos_openarm_joint1" joint="openarm_joint1"
+            kp="100.0" kv="0.0" ... />
+  ```
 
 ---
 
