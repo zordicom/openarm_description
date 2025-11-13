@@ -117,6 +117,15 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
+            "initial_pose",
+            default_value="stable_hanging",
+            choices=["stable_hanging", "canonical", "home"],
+            description="Initial pose from config/mujoco/initial_poses.yaml",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
             "use_sim_time",
             default_value="true",
             description="Use simulation time",
@@ -146,6 +155,7 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration("use_rviz")
     rviz_config = LaunchConfiguration("rviz_config")
     mujoco_model_path = LaunchConfiguration("mujoco_model_path")
+    initial_pose = LaunchConfiguration("initial_pose")
     use_sim_time = LaunchConfiguration("use_sim_time")
     headless = LaunchConfiguration("headless")
     default_controller = LaunchConfiguration("default_controller")
@@ -210,6 +220,12 @@ def generate_launch_description():
         # Get the appropriate MuJoCo model path
         model_path = get_mujoco_model_path(context)
 
+        # Get initial pose configuration
+        pose_name = context.perform_substitution(initial_pose)
+        initial_poses_config_path = os.path.join(
+            pkg_openarm_description, "config", "mujoco", "initial_poses.yaml"
+        )
+
         # Verify model exists and print info
         print(f"\n{'=' * 60}")
         print("MuJoCo Configuration (Single Arm v10):")
@@ -217,6 +233,7 @@ def generate_launch_description():
         print(f"  Exists: {os.path.exists(model_path)}")
         hand_val = context.perform_substitution(hand)
         print(f"  hand={hand_val}")
+        print(f"  Initial pose: {pose_name}")
         print("  Dynamic mode switching: ENABLED")
         print("    - position_servo: Trajectory controller (pos+vel)")
         print("    - mit: All other controllers (default)")
@@ -252,6 +269,8 @@ def generate_launch_description():
                         "mujoco_model_path": model_path,
                         "use_sim_time": use_sim_time,
                         "headless": headless,
+                        "initial_pose": pose_name,
+                        "initial_pose_config": initial_poses_config_path,
                     },
                 ],
             )

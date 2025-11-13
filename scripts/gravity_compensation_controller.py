@@ -4,12 +4,19 @@ Copyright 2025 Zordi, Inc. All rights reserved.
 
 Gravity Compensation Controller for OpenARM in MuJoCo simulation.
 
-This controller demonstrates proper gravity compensation using Pinocchio dynamics.
-It reads joint states and publishes effort commands that compensate for gravity,
-allowing the robot to hold its position without falling.
+This is a STANDALONE testing/prototyping tool that demonstrates external gravity
+compensation using Pinocchio dynamics. It publishes effort commands directly to
+ForwardCommandController (effort_controller).
 
-This is the CORRECT way to control the robot in simulation - the same approach
-you'd use on the real robot with CartesianController or other torque-based controllers.
+**NOTE**: This is for testing and system identification purposes.
+For production control with the OpenARM, use zordi_mit_controller which has
+integrated gravity compensation via Pinocchio, plus MIT-mode PD control.
+
+This standalone approach is useful for:
+- Validating Pinocchio model matches MuJoCo simulation
+- Debugging gravity compensation algorithms
+- System identification
+- Educational purposes
 
 Key Implementation Details:
     - Computes gravity torques g(q) using Pinocchio (NOT from MuJoCo's qfrc_bias)
@@ -38,8 +45,13 @@ MuJoCo Dynamics Equation (NON-STANDARD):
 
     For gravity compensation: qfrc_applied = +qfrc_bias (POSITIVE sign)
 
-    Standard robotics convention is OPPOSITE:
-    M(q)·q̈ = τ_cmd + τ_gravity  →  τ_cmd = -τ_gravity (NEGATIVE sign)
+Standard Robotics Convention (Pinocchio, most textbooks):
+    M(q)·q̈ + C(q,q̇)·q̇ + g(q) = τ
+
+    Where g(q) is the generalized gravity force. Pinocchio's computeGeneralizedGravity
+    returns g(q) in this form. For gravity compensation: τ = +g(q) (POSITIVE sign)
+
+    Both MuJoCo and Pinocchio use POSITIVE sign - they're consistent!
 """
 
 import csv
@@ -48,11 +60,12 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pinocchio as pin
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
+
+import pinocchio as pin
 
 
 class GravityCompensationController(Node):
@@ -759,6 +772,8 @@ class GravityCompensationController(Node):
                     # DIRECT COMPARISON with MuJoCo
                     if self.qfrc_bias_received:
                         # MuJoCo uses +qfrc_bias (positive), so compare with that
+                        # NOTE: qfrc_bias includes gravity + Coriolis + centrifugal
+                        # If robot is moving and add_coriolis=False, expect mismatch!
                         mujoco_expected = +self.mujoco_qfrc_bias[i]
                         error = tau_total[i] - mujoco_expected
                         error_pct = (abs(error) / max(abs(mujoco_expected), 0.01)) * 100
@@ -773,6 +788,10 @@ class GravityCompensationController(Node):
                         self.get_logger().info(
                             f"     Error:             {error:7.3f} Nm ({error_pct:.1f}%)"
                         )
+                        if not self.add_coriolis and np.max(np.abs(self.dq)) > 0.01:
+                            self.get_logger().info(
+                                "     ⚠️  Robot moving but Coriolis OFF - expect mismatch!"
+                            )
 
                         if abs(error) < 0.5:
                             self.get_logger().info(

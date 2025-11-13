@@ -1,0 +1,43 @@
+# Stable initial configurations for MuJoCo simulation
+# URDF remains canonical (q=0), these override at simulation startup only
+#
+# Copyright 2025 Zordi, Inc. All rights reserved.
+
+poses:
+  # Stable hanging pose (default)
+  stable_hanging:
+    joint1: 0.0
+    joint2: -0.785   # -45° (shoulder down)
+    joint3: 0.0
+    joint4: 1.57     # 90° (elbow bent)
+    joint5: 0.0
+    joint6: 0.0
+    joint7: 0.0
+    description: "Arm hanging down, stable equilibrium"
+    joint_limits_validated: true
+
+  # Canonical pose (for reference/testing)
+  canonical:
+    joint1: 0.0
+    joint2: 0.0
+    joint3: 0.0
+    joint4: 0.0
+    joint5: 0.0
+    joint6: 0.0
+    joint7: 0.0
+    description: "URDF canonical, unstable for control testing"
+    joint_limits_validated: true
+
+  # Home pose (common robot home)
+  home:
+    joint1: 0.0
+    joint2: -0.5
+    joint3: 0.0
+    joint4: 1.2
+    joint5: 0.0
+    joint6: 0.0
+    joint7: 0.0
+    description: "Common robot home position"
+    joint_limits_validated: true
+
+

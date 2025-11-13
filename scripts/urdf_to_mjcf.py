@@ -99,14 +99,22 @@ def disable_gravity_in_mjcf(mjcf_path: Path) -> None:
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
 
 
-def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=5000.0):
-    """Add MuJoCo position actuators for each joint with high stiffness.
+def add_multi_mode_actuators(
+    root, joint_limits_dict, kp_pos=100.0, kv_pos=0.0, kv_vel=10.0
+):
+    """Add three actuators per joint for multi-mode control.
+
+    Based on validated 1-DoF test results:
+    - Position actuator (kp=100, kv=0): For position_servo mode
+    - Velocity actuator (kv=10): For velocity control and damping
+    - Motor actuator: For MIT mode (pure torque)
 
     Args:
         root: XML root element
         joint_limits_dict: Dictionary of joint limits from YAML
-        kp: Position gain (stiffness) - default 50000 for firmware-like behavior
-        kv: Velocity gain (damping) - default 5000 for heavy damping (eliminates oscillations)
+        kp_pos: Position actuator stiffness (default: 100.0, validated)
+        kv_pos: Position actuator damping (default: 0.0, damping via velocity actuator)
+        kv_vel: Velocity actuator gain (default: 10.0, validated)
 
     Returns:
         ET.Element: The actuator element
@@ -116,7 +124,7 @@ def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=5000.0):
     # Create actuator element
     actuator_elem = ET.SubElement(root, "actuator")
 
-    num_actuators = 0
+    num_joints = 0
     for joint_name, joint_data in joint_limits_dict.items():
         if not joint_name.startswith("joint"):
             continue  # Skip non-joint entries (like gripper)
@@ -126,22 +134,50 @@ def add_position_actuators(root, joint_limits_dict, kp=50000.0, kv=5000.0):
         upper = limits.get("upper", math.pi)
         effort = limits.get("effort", 40.0)
 
-        # Create position actuator with high gains
+        # Estimate max velocity (if not specified, use default 3.0 rad/s)
+        velocity = limits.get("velocity", 3.0)
+
+        # 1. Position actuator: For position_servo mode
         ET.SubElement(
             actuator_elem,
             "position",
-            name=f"actuator_openarm_{joint_name}",
+            name=f"act_pos_openarm_{joint_name}",
             joint=f"openarm_{joint_name}",
-            kp=str(kp),
-            kv=str(kv),
+            kp=str(kp_pos),
+            kv=str(kv_pos),
             ctrlrange=f"{lower} {upper}",
             forcerange=f"-{effort} {effort}",
         )
-        num_actuators += 1
+
+        # 2. Velocity actuator: For velocity control and damping
+        ET.SubElement(
+            actuator_elem,
+            "velocity",
+            name=f"act_vel_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            kv=str(kv_vel),
+            ctrlrange=f"-{velocity} {velocity}",
+            forcerange=f"-{effort} {effort}",
+        )
+
+        # 3. Motor actuator: For MIT mode (torque control)
+        ET.SubElement(
+            actuator_elem,
+            "motor",
+            name=f"act_tau_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            ctrlrange=f"-{effort} {effort}",
+            forcerange=f"-{effort} {effort}",
+        )
+
+        num_joints += 1
 
     print(
-        f"✓ Added {num_actuators} position actuators (kp={kp}, kv={kv}, firmware-like gains)"
+        f"✓ Added {num_joints * 3} actuators ({num_joints} joints × 3 types: position/velocity/motor)"
     )
+    print(f"  Position: kp={kp_pos}, kv={kv_pos}")
+    print(f"  Velocity: kv={kv_vel}")
+    print("  Motor: direct torque")
     return actuator_elem
 
 
@@ -227,15 +263,20 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
 
 
 def add_actuators_to_mjcf(
-    mjcf_path: Path, joint_limits_path: Path, kp=50000.0, kv=5000.0
+    mjcf_path: Path,
+    joint_limits_path: Path,
+    kp_pos=100.0,
+    kv_pos=0.0,
+    kv_vel=10.0,
 ) -> None:
-    """Add position actuators to MJCF file after conversion.
+    """Add three actuators per joint to MJCF file after conversion.
 
     Args:
         mjcf_path: Path to MJCF file
         joint_limits_path: Path to joint limits YAML file
-        kp: Position actuator gain (default: 50000 for high stiffness)
-        kv: Velocity actuator gain (default: 5000 for heavy damping)
+        kp_pos: Position actuator stiffness (default: 100.0, validated)
+        kv_pos: Position actuator damping (default: 0.0)
+        kv_vel: Velocity actuator gain (default: 10.0, validated)
     """
     import xml.etree.ElementTree as ET
 
@@ -254,12 +295,12 @@ def add_actuators_to_mjcf(
     tree = ET.parse(mjcf_path)
     root = tree.getroot()
 
-    # Add actuators
-    add_position_actuators(root, joint_limits, kp, kv)
+    # Add multi-mode actuators
+    add_multi_mode_actuators(root, joint_limits, kp_pos, kv_pos, kv_vel)
 
     # Write back
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
-    print(f"✓ Added position actuators to {mjcf_path.name}")
+    print(f"✓ Added multi-mode actuators to {mjcf_path.name}")
 
 
 def convert_urdf_to_mjcf(urdf_str: str, output_path: Path) -> None:
@@ -419,8 +460,9 @@ def build_configuration(
     bimanual: bool = False,
     hand: bool = False,
     no_gravity: bool = False,
-    actuator_kp: float = 50000.0,
-    actuator_kv: float = 5000.0,
+    kp_pos: float = 100.0,
+    kv_pos: float = 0.0,
+    kv_vel: float = 10.0,
     package_path: Path = None,
 ):
     """Build a single configuration: xacro → URDF → XML.
@@ -432,8 +474,9 @@ def build_configuration(
         bimanual: Whether to generate bimanual configuration
         hand: Whether to include hand/gripper
         no_gravity: Whether to disable gravity
-        actuator_kp: Position actuator gain
-        actuator_kv: Velocity actuator gain
+        kp_pos: Position actuator stiffness (default: 100.0, validated)
+        kv_pos: Position actuator damping (default: 0.0)
+        kv_vel: Velocity actuator gain (default: 10.0, validated)
         package_path: Path to package root
     """
     config_name = output_xml.stem
@@ -460,17 +503,18 @@ def build_configuration(
         print("  Disabling gravity...")
         disable_gravity_in_mjcf(output_xml)
 
-    # Step 5: Add position actuators
+    # Step 5: Add multi-mode actuators
     joint_limits_path = package_path / "config" / "arm" / arm_type / "joint_limits.yaml"
-    add_actuators_to_mjcf(output_xml, joint_limits_path, actuator_kp, actuator_kv)
+    add_actuators_to_mjcf(output_xml, joint_limits_path, kp_pos, kv_pos, kv_vel)
 
     print(f"✓ Complete: {config_name}\n")
 
 
 def build_all_configurations(
     arm_type: str = "v10",
-    actuator_kp: float = 50000.0,
-    actuator_kv: float = 5000.0,
+    kp_pos: float = 100.0,
+    kv_pos: float = 0.0,
+    kv_vel: float = 10.0,
     package_path: Path = None,
 ):
     """Build all common configurations.
@@ -561,8 +605,9 @@ def build_all_configurations(
                     bimanual=config["bimanual"],
                     hand=config["hand"],
                     no_gravity=config["no_gravity"],
-                    actuator_kp=actuator_kp,
-                    actuator_kv=actuator_kv,
+                    kp_pos=kp_pos,
+                    kv_pos=kv_pos,
+                    kv_vel=kv_vel,
                     package_path=package_path,
                 )
 
@@ -643,16 +688,22 @@ def main():
         help="Disable gravity in the generated MJCF (useful for PID tuning)",
     )
     parser.add_argument(
-        "--actuator-kp",
+        "--kp-pos",
         type=float,
-        default=50000.0,
-        help="Position actuator stiffness gain (default: 50000 for DAMIAO Position Mode)",
+        default=100.0,
+        help="Position actuator stiffness gain (default: 100.0, validated)",
     )
     parser.add_argument(
-        "--actuator-kv",
+        "--kv-pos",
         type=float,
-        default=5000.0,
-        help="Position actuator damping gain (default: 5000 for heavy damping)",
+        default=0.0,
+        help="Position actuator damping gain (default: 0.0, damping via velocity actuator)",
+    )
+    parser.add_argument(
+        "--kv-vel",
+        type=float,
+        default=10.0,
+        help="Velocity actuator gain (default: 10.0, validated)",
     )
 
     args = parser.parse_args()
@@ -673,8 +724,9 @@ def main():
     if args.build_all:
         build_all_configurations(
             arm_type=args.arm_type,
-            actuator_kp=args.actuator_kp,
-            actuator_kv=args.actuator_kv,
+            kp_pos=args.kp_pos,
+            kv_pos=args.kv_pos,
+            kv_vel=args.kv_vel,
             package_path=args.package_path,
         )
         sys.exit(0)
@@ -697,8 +749,9 @@ def main():
             bimanual=args.bimanual,
             hand=args.hand,
             no_gravity=args.no_gravity,
-            actuator_kp=args.actuator_kp,
-            actuator_kv=args.actuator_kv,
+            kp_pos=args.kp_pos,
+            kv_pos=args.kv_pos,
+            kv_vel=args.kv_vel,
             package_path=args.package_path,
         )
 
