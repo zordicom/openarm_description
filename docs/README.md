@@ -1,6 +1,6 @@
 # OpenARM - Actuator-Centric Control with MIT Mode
 
-**Status**: ✅ Production Ready  
+**Status**: ✅ Production Ready
 **Last Updated**: November 13, 2025
 
 ---
@@ -20,8 +20,9 @@ An **actuator-centric control system** for the Zordi OpenARM 6-DOF robot arm wit
 ## System Capabilities
 
 ### Control Modes
+
 1. **Position-only** - Direct position control
-2. **Velocity-only** - Direct velocity control  
+2. **Velocity-only** - Direct velocity control
 3. **Torque-only** - Direct torque control
 4. **Position + Velocity** - Joint trajectory tracking
 5. **MIT Mode** - Full state control with gravity compensation
@@ -42,11 +43,13 @@ An **actuator-centric control system** for the Zordi OpenARM 6-DOF robot arm wit
 ### 1. Installation
 
 #### Prerequisites
+
 - Ubuntu 22.04
 - ROS2 Humble
 - Python 3.10+
 
 #### Install Dependencies
+
 ```bash
 # ROS2 Humble (if not installed)
 sudo apt install ros-humble-desktop
@@ -74,14 +77,25 @@ source install/setup.bash
 ### 2. Launch OpenARM
 
 #### With Gravity Compensation (Recommended)
+
 ```bash
 ros2 launch openarm_description single_arm.launch.py \
   default_controller:=zordi_mit_controller \
   rviz:=true \
-  headless:=false
+  headless:=false \
+  initial_keyframe:=home
+```
+
+#### Start at Different Keyframe
+
+```bash
+ros2 launch openarm_description single_arm.launch.py \
+  default_controller:=zordi_mit_controller \
+  initial_keyframe:=pose1
 ```
 
 #### Headless (No GUI)
+
 ```bash
 ros2 launch openarm_description single_arm.launch.py \
   default_controller:=zordi_mit_controller \
@@ -92,26 +106,29 @@ ros2 launch openarm_description single_arm.launch.py \
 ### 3. Send Commands
 
 #### Check Active Controllers
+
 ```bash
 ros2 control list_controllers
 ```
 
 Expected output:
+
 ```
 zordi_mit_controller  zordi_mit_controller/ZordiMITController  active
 joint_state_broadcaster  joint_state_broadcaster/JointStateBroadcaster  active
 ```
 
 #### Send Trajectory (via action)
+
 ```bash
 ros2 action send_goal /zordi_mit_controller/follow_joint_trajectory \
   control_msgs/action/FollowJointTrajectory \
   "{
     trajectory: {
-      joint_names: ['openarm_joint1', 'openarm_joint2', 'openarm_joint3', 
+      joint_names: ['openarm_joint1', 'openarm_joint2', 'openarm_joint3',
                     'openarm_joint4', 'openarm_joint5', 'openarm_joint6'],
       points: [
-        {positions: [0.0, 0.5, -0.5, 0.3, 0.0, 0.0], 
+        {positions: [0.0, 0.5, -0.5, 0.3, 0.0, 0.0],
          time_from_start: {sec: 3}}
       ]
     }
@@ -119,6 +136,7 @@ ros2 action send_goal /zordi_mit_controller/follow_joint_trajectory \
 ```
 
 #### Send Trajectory (via topic)
+
 ```python
 #!/usr/bin/env python3
 import rclpy
@@ -164,8 +182,9 @@ MIT mode enables **full state control** with feedforward compensation:
 ```
 
 Where:
+
 - `q_cmd`, `qd_cmd` = Desired position/velocity
-- `q`, `qd` = Current position/velocity  
+- `q`, `qd` = Current position/velocity
 - `τ_ff` = Feedforward torque (e.g., gravity compensation)
 - `Kp`, `Kd` = PID gains from URDF
 
@@ -193,6 +212,7 @@ zordi_mit_controller:
 ### Configuration
 
 #### URDF - PID Gains
+
 ```xml
 <joint name="openarm_joint1">
   <command_interface name="position"/>
@@ -200,7 +220,7 @@ zordi_mit_controller:
   <command_interface name="effort"/>
   <state_interface name="position"/>
   <state_interface name="velocity"/>
-  
+
   <!-- MIT mode PID gains (use underscores, not dots!) -->
   <param name="position_kp">20.0</param>
   <param name="position_ki">0.0</param>
@@ -212,16 +232,17 @@ zordi_mit_controller:
 ```
 
 #### MuJoCo XML - Actuators
+
 ```xml
 <actuator>
   <!-- Position actuator (inactive in MIT mode) -->
   <position name="act_pos_openarm_joint1" joint="openarm_joint1"
             kp="20.0" kv="0.0" ctrlrange="-3.14 3.14" forcerange="-87 87"/>
-  
+
   <!-- Velocity actuator (inactive in MIT mode) -->
   <velocity name="act_vel_openarm_joint1" joint="openarm_joint1"
             kv="2.0" ctrlrange="-2.0 2.0" forcerange="-87 87"/>
-  
+
   <!-- Torque actuator (receives composed τ in MIT mode) -->
   <motor name="act_tau_openarm_joint1" joint="openarm_joint1"
          ctrlrange="-87 87" forcerange="-87 87"/>
@@ -286,17 +307,20 @@ ros2 control set_controller_state joint_trajectory_controller active
 ## Common Commands
 
 ### Monitor Joint States
+
 ```bash
 ros2 topic echo /joint_states
 ```
 
 ### Check Controller Status
+
 ```bash
 ros2 control list_controllers
 ros2 control list_hardware_interfaces
 ```
 
 ### Inspect Trajectory Progress
+
 ```bash
 # For action-based control
 ros2 action list
@@ -309,12 +333,23 @@ ros2 action send_goal /zordi_mit_controller/follow_joint_trajectory \
 ```
 
 ### Debug MuJoCo Gravity
+
 ```bash
 # Compare Pinocchio vs MuJoCo gravity compensation
 ros2 topic echo /mujoco/qfrc_bias
 ```
 
 ### Restart Simulation
+
+**Option 1: Reset via service (recommended)**
+
+```bash
+ros2 service call /simulation_control \
+  mujoco_ros2_control_msgs/srv/SimulationControl "{command: 'reset'}"
+```
+
+**Option 2: Kill and relaunch**
+
 ```bash
 # Kill all nodes
 pkill -9 -f "single_arm.launch.py"
@@ -329,14 +364,17 @@ ros2 launch openarm_description single_arm.launch.py \
 ## Troubleshooting
 
 ### Robot Drifts After Trajectory
+
 **Problem**: Robot falls under gravity after trajectory completes.
 
 **Solution**: Ensure `zordi_mit_controller` has `use_gravity_compensation: true` in YAML config.
 
 ### PID Gains Not Loading
+
 **Problem**: Gains are 0.0, robot doesn't track.
 
 **Solution**: Check URDF uses **underscores**, not dots:
+
 ```xml
 <!-- CORRECT -->
 <param name="position_kp">20.0</param>
@@ -347,28 +385,45 @@ ros2 launch openarm_description single_arm.launch.py \
 <param name="velocity.kd">2.0</param>
 ```
 
-### Initial Pose Not Loading
+### Initial Keyframe Not Loading
+
 **Problem**: Robot starts at wrong position.
 
-**Solution**: Pass `initial_pose` and `initial_pose_config` to launch file:
+**Solution**: Specify desired keyframe (defined in MuJoCo XML):
+
 ```bash
 ros2 launch openarm_description single_arm.launch.py \
-  initial_pose:=home \
-  initial_pose_config:=/path/to/poses.yaml
+  initial_keyframe:=home
+```
+
+**Available keyframes**:
+
+- `home`: All joints at zero (default)
+- `pose1`: Test configuration
+
+**Runtime reset**:
+
+```bash
+ros2 service call /reset_to_keyframe \
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'home'}"
 ```
 
 ### Controller Won't Start
+
 **Problem**: `zordi_mit_controller` fails to activate.
 
-**Solution**: 
+**Solution**:
+
 1. Check Pinocchio is installed: `python3 -c "import pinocchio"`
 2. Check URDF is valid: `check_urdf <urdf_file>`
 3. Rebuild: `colcon build --packages-select zordi_mit_controller`
 
 ### Trajectory Not Executing
+
 **Problem**: Published trajectory but robot doesn't move.
 
 **Solution**:
+
 1. Check controller is active: `ros2 control list_controllers`
 2. Verify topic/action name matches controller namespace
 3. Ensure trajectory has valid joint names and time_from_start
@@ -416,39 +471,56 @@ ros2 launch openarm_description single_arm.launch.py \
 ## Key Files
 
 ### Configuration
+
 - `openarm_config/config/zordi_mit_controller.yaml` - Controller config
 - `openarm_description/urdf/openarm_v10.urdf` - Robot URDF with PID gains
-- `openarm_description/mujoco_models/openarm_v10.xml` - MuJoCo model
+- `openarm_description/mujoco_models/openarm_v10.xml` - MuJoCo model with keyframes
 
 ### Launch Files
+
 - `openarm_description/launch/single_arm.launch.py` - Main launch file
+- `openarm_description/launch/test_openarm_multimode.launch.py` - Testing launch file
 
 ### Source Code
+
 - `mujoco_ros2_control/src/mujoco_system.cpp` - Hardware interface
 - `zordi_mit_controller/src/zordi_mit_controller.cpp` - MIT controller
 
 ### Documentation
+
 - `README.md` - This file
 - `PROJECT_HISTORY.md` - Development history & validation
 - `TECHNICAL_REFERENCE.md` - Implementation details
+
+### Keyframes
+
+Keyframes are defined in the MuJoCo XML models:
+
+- `home`: All joints at zero position (default)
+- `pose1`: Test configuration [1.0, 1.5, -1.0, 2.0, 1.0, -1.5, 1.5]
+
+Runtime reset available via `/reset_to_keyframe` service.
 
 ---
 
 ## Next Steps
 
 ### For New Users
+
 1. Run the quick start commands above
 2. Send a simple trajectory
 3. Monitor joint states
 4. Experiment with different controllers
 
 ### For Developers
+
 1. Read `TECHNICAL_REFERENCE.md` for architecture details
 2. Review `PROJECT_HISTORY.md` for validation approach
 3. Modify PID gains in URDF for your application
 4. Implement custom controllers using `zordi_mit_controller` as template
 
 ### For Troubleshooting
+
 1. Check this README's troubleshooting section
 2. Review logs: `ros2 launch ... 2>&1 | tee launch.log`
 3. Consult `PROJECT_HISTORY.md` for similar issues solved
@@ -465,7 +537,6 @@ ros2 launch openarm_description single_arm.launch.py \
 
 ---
 
-**Last validated**: November 13, 2025  
-**System status**: Production ready ✅  
+**Last validated**: November 13, 2025
+**System status**: Production ready ✅
 **Documentation version**: 1.0
-

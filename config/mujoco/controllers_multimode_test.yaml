@@ -1,0 +1,215 @@
+# OpenARM Multimode Testing Configuration
+#
+# Copyright 2025 Zordi, Inc. All rights reserved.
+#
+# This configuration loads multiple controllers for comprehensive testing:
+# 1. joint_trajectory_controller - Standard position+velocity control
+# 2. zordi_hardware_pd_controller - Hardware PD (pos+vel+eff, PD in hardware)
+# 3. zordi_software_pd_controller - Software PD (eff only, PD in controller)
+# 4. zordi_grav_comp_controller - Pure gravity compensation (backdrivable)
+
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Hz - Match MuJoCo's 1ms timestep
+
+    # Joint state broadcaster (always active)
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # Standard ROS2 trajectory controller (position + velocity)
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    # Hardware PD mode - Uses hardware MIT mode (MuJoCo or DAMIAO)
+    zordi_hardware_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    # Software PD mode - Computes PD internally
+    zordi_software_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    # Pure gravity compensation - Backdrivable operation
+    zordi_grav_comp_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+# Joint state broadcaster configuration
+joint_state_broadcaster:
+  ros__parameters:
+    publish_rate: 100  # Hz
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+# Joint Trajectory Controller
+# Uses position + velocity interfaces (no effort)
+# Triggers position_servo mode in MuJoCo (actuator-based control)
+joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+
+    state_interfaces:
+      - position
+      - velocity
+
+    allow_partial_joints_goal: false
+    open_loop_control: false
+    allow_integration_in_goal_trajectories: true
+
+    # Tolerances
+    constraints:
+      stopped_velocity_tolerance: 0.05  # rad/s
+      goal_time: 0.5  # Allow 0.5s settling time
+
+    # Per-joint position tolerances (rad)
+    openarm_joint1: {trajectory: 0.05, goal: 0.01}
+    openarm_joint2: {trajectory: 0.05, goal: 0.01}
+    openarm_joint3: {trajectory: 0.05, goal: 0.01}
+    openarm_joint4: {trajectory: 0.05, goal: 0.01}
+    openarm_joint5: {trajectory: 0.05, goal: 0.01}
+    openarm_joint6: {trajectory: 0.05, goal: 0.01}
+    openarm_joint7: {trajectory: 0.05, goal: 0.01}
+
+# Hardware PD Controller
+# Uses ALL THREE interfaces: position + velocity + effort
+# Triggers MIT mode in hardware (mujoco_system.cpp):
+#   - Position/velocity actuators neutralized
+#   - Torque actuator receives: τ = Kp*(q_cmd - q) + Kd*(qd_cmd - qd) + τ_ff
+#   - PD gains from URDF, gravity comp from controller
+zordi_hardware_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Hardware PD mode: Claims all three interfaces
+    command_interfaces:
+      - position  # Hardware: Adds Kp*(pos_cmd - pos)
+      - velocity  # Hardware: Adds Kd*(vel_cmd - vel)
+      - effort    # Hardware: Adds effort_cmd (gravity comp)
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Hardware computes PD (in mujoco_system.cpp)
+    compute_pd_internally: false
+    use_gravity_compensation: true
+
+    # Action interface parameters
+    action_monitor_rate: 20.0  # Hz
+
+# Software PD Controller
+# Uses EFFORT interface only
+# Computes PD internally: τ = Kp*(q_cmd - q) + Kd*(qd_cmd - qd) + τ_gravity
+# Works with any torque-controlled robot
+zordi_software_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Software PD mode: Claims effort only
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Controller computes PD internally
+    compute_pd_internally: true
+    use_gravity_compensation: true
+
+    # PD gains for software PD mode
+    # These are used when compute_pd_internally: true
+    gains:
+      openarm_joint1: {p: 100.0, d: 10.0}
+      openarm_joint2: {p: 100.0, d: 10.0}
+      openarm_joint3: {p: 100.0, d: 10.0}
+      openarm_joint4: {p: 100.0, d: 10.0}
+      openarm_joint5: {p: 100.0, d: 10.0}
+      openarm_joint6: {p: 100.0, d: 10.0}
+      openarm_joint7: {p: 100.0, d: 10.0}
+
+    # Action interface parameters
+    action_monitor_rate: 20.0  # Hz
+
+# Gravity Compensation Controller
+# Uses EFFORT interface only
+# Outputs ONLY gravity compensation torques (no PD control)
+# Fully backdrivable - robot can be moved by hand
+zordi_grav_comp_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Gravity comp only mode: Claims effort only
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Pure gravity compensation mode
+    gravity_comp_only: true
+    use_gravity_compensation: true
+
+    # No action interface needed (no trajectory tracking)
+
+# Usage Notes:
+#
+# 1. Joint Trajectory Controller (Standard Control):
+#    ros2 control set_controller_state joint_trajectory_controller active
+#    ros2 topic pub --once /joint_trajectory_controller/joint_trajectory ...
+#
+# 2. Hardware PD Controller (MIT Mode in Hardware):
+#    ros2 control set_controller_state zordi_hardware_pd_controller active
+#    ros2 action send_goal /zordi_hardware_pd_controller/follow_joint_trajectory ...
+#
+# 3. Software PD Controller (PD in Controller):
+#    ros2 control set_controller_state zordi_software_pd_controller active
+#    ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory ...
+#
+# 4. Gravity Compensation Controller (Backdrivable):
+#    ros2 control set_controller_state zordi_grav_comp_controller active
+#    # No trajectories - just holds with gravity comp, fully backdrivable
+#
+# Controller Switching:
+#    ros2 service call /controller_manager/switch_controller \
+#      controller_manager_msgs/srv/SwitchController \
+#      "{activate_controllers: ['zordi_software_pd_controller'],
+#        deactivate_controllers: ['zordi_hardware_pd_controller'],
+#        strictness: 2}"

@@ -28,16 +28,74 @@ poses:
     description: "URDF canonical, unstable for control testing"
     joint_limits_validated: true
 
-  # Home pose (common robot home)
+  # Home pose (vertically upright - v10 zero config)
   home:
     joint1: 0.0
-    joint2: -0.5
+    joint2: 0.0
     joint3: 0.0
-    joint4: 1.2
+    joint4: 0.0
     joint5: 0.0
     joint6: 0.0
     joint7: 0.0
-    description: "Common robot home position"
+    description: "Vertically upright (v10 zero config)"
     joint_limits_validated: true
 
+  # Test pose 1 - Positive variations
+  pose1:
+    joint1: 1.0
+    joint2: 1.5
+    joint3: -1.0
+    joint4: 2.0
+    joint5: 1.0
+    joint6: -1.5
+    joint7: 1.5
+    description: "Test configuration 1"
+    joint_limits_validated: false
 
+  # Test pose 2 - Negative variations
+  pose2:
+    joint1: -1.0
+    joint2: -1.5
+    joint3: 1.0
+    joint4: -2.0
+    joint5: -1.0
+    joint6: 1.5
+    joint7: -1.5
+    description: "Test configuration 2"
+    joint_limits_validated: false
+
+  # Test pose 3 - Larger positive variations
+  pose3:
+    joint1: 2.0
+    joint2: 1.0
+    joint3: 2.5
+    joint4: 1.5
+    joint5: 2.5
+    joint6: 1.0
+    joint7: 2.0
+    description: "Test configuration 3"
+    joint_limits_validated: false
+
+  # Test pose 4 - Larger negative variations
+  pose4:
+    joint1: -2.0
+    joint2: -1.0
+    joint3: -2.5
+    joint4: -1.5
+    joint5: -2.5
+    joint6: -1.0
+    joint7: -2.0
+    description: "Test configuration 4"
+    joint_limits_validated: false
+
+  # Test pose 5 - Mixed variations
+  pose5:
+    joint1: 1.5
+    joint2: -1.0
+    joint3: 2.0
+    joint4: -1.5
+    joint5: 1.0
+    joint6: -2.0
+    joint7: 1.5
+    description: "Test configuration 5"
+    joint_limits_validated: false

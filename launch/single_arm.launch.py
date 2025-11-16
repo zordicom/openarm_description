@@ -13,7 +13,7 @@ The system uses control_mode:=all in MuJoCo, which enables automatic controller
 switching based on which ROS2 controller is active.
 
 Usage Examples:
-    # Basic launch (default: joint_trajectory_controller active)
+    # Basic launch (default: joint_trajectory_controller active, home keyframe)
     ros2 launch openarm_description single_arm.launch.py
 
     # Start with effort controller (pure torque/gravity comp)
@@ -22,7 +22,11 @@ Usage Examples:
 
     # Start with full MIT controller (gravity-comp trajectories)
     ros2 launch openarm_description single_arm.launch.py \
-        default_controller:=full_mit_controller
+        default_controller:=zordi_mit_controller
+
+    # Start at pose1 keyframe
+    ros2 launch openarm_description single_arm.launch.py \
+        initial_keyframe:=pose1
 
     # With hand/gripper
     ros2 launch openarm_description single_arm.launch.py hand:=true
@@ -117,10 +121,10 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
-            "initial_pose",
-            default_value="stable_hanging",
-            choices=["stable_hanging", "canonical", "home"],
-            description="Initial pose from config/mujoco/initial_poses.yaml",
+            "initial_keyframe",
+            default_value="home",
+            choices=["home", "pose1"],
+            description="Initial keyframe from MuJoCo XML model",
         )
     )
 
@@ -155,7 +159,7 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration("use_rviz")
     rviz_config = LaunchConfiguration("rviz_config")
     mujoco_model_path = LaunchConfiguration("mujoco_model_path")
-    initial_pose = LaunchConfiguration("initial_pose")
+    initial_keyframe = LaunchConfiguration("initial_keyframe")
     use_sim_time = LaunchConfiguration("use_sim_time")
     headless = LaunchConfiguration("headless")
     default_controller = LaunchConfiguration("default_controller")
@@ -220,11 +224,8 @@ def generate_launch_description():
         # Get the appropriate MuJoCo model path
         model_path = get_mujoco_model_path(context)
 
-        # Get initial pose configuration
-        pose_name = context.perform_substitution(initial_pose)
-        initial_poses_config_path = os.path.join(
-            pkg_openarm_description, "config", "mujoco", "initial_poses.yaml"
-        )
+        # Get initial keyframe name
+        keyframe_name = context.perform_substitution(initial_keyframe)
 
         # Verify model exists and print info
         print(f"\n{'=' * 60}")
@@ -233,7 +234,7 @@ def generate_launch_description():
         print(f"  Exists: {os.path.exists(model_path)}")
         hand_val = context.perform_substitution(hand)
         print(f"  hand={hand_val}")
-        print(f"  Initial pose: {pose_name}")
+        print(f"  Initial keyframe: {keyframe_name}")
         print("  Dynamic mode switching: ENABLED")
         print("    - position_servo: Trajectory controller (pos+vel)")
         print("    - mit: All other controllers (default)")
@@ -269,8 +270,7 @@ def generate_launch_description():
                         "mujoco_model_path": model_path,
                         "use_sim_time": use_sim_time,
                         "headless": headless,
-                        "initial_pose": pose_name,
-                        "initial_pose_config": initial_poses_config_path,
+                        "initial_keyframe": keyframe_name,
                     },
                 ],
             )

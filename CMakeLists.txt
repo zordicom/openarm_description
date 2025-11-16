@@ -34,7 +34,8 @@ install(DIRECTORY launch meshes rviz urdf config mujoco_models
 
 # Install Python scripts
 install(PROGRAMS
-        scripts/mujoco_passive_viewer.py
+        scripts/test_openarm_multimode_scenario_a.py
+        scripts/test_openarm_multimode_scenario_b.py
         DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
