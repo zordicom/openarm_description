@@ -3,49 +3,49 @@ joint1:
     lower: -1.396263
     upper: 3.490659
     velocity: 16.754666
-    effort: 40
+    effort: 200  # Increased from 40 for gravity compensation
 
 joint2:
   limit:
     lower: -1.745329
     upper: 1.745329
     velocity: 16.754666
-    effort: 40
+    effort: 200  # Increased from 40 for gravity compensation
 
 joint3:
   limit:
     lower: -1.570796
     upper: 1.570796
     velocity: 5.445426
-    effort: 27
+    effort: 150  # Increased from 27 for gravity compensation
 
 joint4:
   limit:
     lower: 0.0
     upper: 2.443461
     velocity: 5.445426
-    effort: 27
+    effort: 150  # Increased from 27 for gravity compensation
 
 joint5:
   limit:
     lower: -1.570796
     upper: 1.570796
     velocity: 20.943946
-    effort: 7
+    effort: 50  # Increased from 7 for gravity compensation
 
 joint6:
   limit:
     lower: -0.785398
     upper: 0.785398
     velocity: 20.943946
-    effort: 7
+    effort: 50  # Increased from 7 for gravity compensation
 
 joint7:
   limit:
     lower: -1.570796
     upper: 1.570796
     velocity: 20.943946
-    effort: 7
+    effort: 50  # Increased from 7 for gravity compensation
 
 # joint_gripper1:
 #   limit:

@@ -33,6 +33,7 @@ Available Controllers:
     - zordi_hardware_pd_controller: Hardware PD (pos+vel+eff, MIT mode)
     - zordi_software_pd_controller: Software PD (eff only, PD in controller)
     - zordi_grav_comp_controller: Gravity comp only (backdrivable)
+    - zordi_mit_rnea_controller: Full inverse dynamics with cubic splines
 """
 
 from pathlib import Path
@@ -70,28 +71,41 @@ def generate_launch_description():
 
     # Paths
     urdf_file = pkg_share / "urdf" / "robot" / "v10.urdf.xacro"
+    # NOTE: The XML file was generated from URDF using scripts/urdf_to_mjcf.py
+    # This ensures Pinocchio and MuJoCo use identical inertial properties
     mujoco_model = str(pkg_share / "mujoco_models" / "openarm_v10.xml")
     controller_config = str(
         pkg_share / "config" / "mujoco" / "controllers_multimode_test.yaml"
     )
 
     # Generate robot description
-    robot_description_content = Command([
-        FindExecutable(name="xacro"),
-        " ",
-        str(urdf_file),
-        " ",
-        "ros2_control:=true",
-        " ",
-        "use_mujoco:=true",
-        " ",
-        "hand:=false",
-        " ",
-        "bimanual:=false",
-    ])
+    robot_description_content = Command(
+        [
+            FindExecutable(name="xacro"),
+            " ",
+            str(urdf_file),
+            " ",
+            "ros2_control:=true",
+            " ",
+            "use_mujoco:=true",
+            " ",
+            "hand:=false",
+            " ",
+            "bimanual:=false",
+        ]
+    )
     robot_description = {
         "robot_description": ParameterValue(robot_description_content, value_type=str)
     }
+
+    # Robot state publisher (required for gravity compensation)
+    # Controllers fetch robot_description from this node to initialize Pinocchio
+    robot_state_pub_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        parameters=[robot_description],
+        output="screen",
+    )
 
     # MuJoCo ROS2 Control node
     mujoco_node = Node(
@@ -150,7 +164,16 @@ def generate_launch_description():
         output="screen",
     )
 
+    # Load zordi_mit_rnea_controller (inactive)
+    load_rnea = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["zordi_mit_rnea_controller", "--inactive"],
+        output="screen",
+    )
+
     nodes_to_start = [
+        robot_state_pub_node,  # Start first so controllers can fetch robot_description
         mujoco_node,
         # Start controllers when mujoco node starts
         RegisterEventHandler(
@@ -162,6 +185,7 @@ def generate_launch_description():
                     load_hw_pd,
                     load_sw_pd,
                     load_grav_comp,
+                    load_rnea,
                 ],
             )
         ),

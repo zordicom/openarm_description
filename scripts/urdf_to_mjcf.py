@@ -27,7 +27,6 @@ import math
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import mujoco
@@ -95,7 +94,8 @@ def disable_gravity_in_mjcf(mjcf_path: Path) -> None:
         option.set("gravity", "0 0 0")
         print("  ✓ Disabled gravity in MJCF (set to 0 0 0)")
 
-    # Write back
+    # Format and write back
+    ET.indent(tree, space="  ", level=0)
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
 
 
@@ -257,14 +257,171 @@ def fix_mjcf_mesh_paths(mjcf_path: Path) -> None:
                 "file", str(relative_path).replace("\\", "/")
             )  # Use forward slashes
 
-    # Save the updated MJCF
+    # Format and save the updated MJCF
+    ET.indent(tree, space="  ", level=0)
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
     print("✓ Fixed mesh paths in MJCF")
+
+
+def read_pid_gains_from_urdf(urdf_str: str) -> dict:
+    """Extract PID gains from URDF ros2_control parameters.
+
+    Returns dict mapping joint names to (kp, kd) tuples.
+    If no gains found, returns empty dict (will use defaults).
+    """
+    import xml.etree.ElementTree as ET
+
+    try:
+        urdf_tree = ET.fromstring(urdf_str)
+        gains = {}
+
+        # Find all joints in ros2_control
+        for joint in urdf_tree.findall(".//ros2_control//joint"):
+            joint_name = joint.get("name", "")
+            if not joint_name:
+                continue
+
+            kp = None
+            kd = None
+
+            # Look for position_kp and position_kd parameters
+            for param in joint.findall("./param"):
+                param_name = param.get("name", "")
+                if param_name == "position_kp":
+                    kp = float(param.text)
+                elif param_name == "position_kd":
+                    kd = float(param.text)
+
+            if kp is not None and kd is not None:
+                # Strip prefix (e.g., "openarm_joint1" -> "joint1")
+                simple_name = joint_name.replace("openarm_", "")
+                gains[simple_name] = (kp, kd)
+
+        if gains:
+            print(f"✓ Read PID gains from URDF for {len(gains)} joints")
+        else:
+            print("  No PID gains found in URDF, using defaults")
+
+        return gains
+
+    except Exception as e:
+        print(f"Warning: Could not read PID gains from URDF: {e}")
+        return {}
+
+
+def add_keyframes_from_yaml(
+    mjcf_path: Path, poses_yaml_path: Path, package_path: Path
+) -> None:
+    """Add keyframes to MJCF from initial_poses.yaml file.
+
+    Args:
+        mjcf_path: Path to MJCF file
+        poses_yaml_path: Path to initial_poses.yaml (if None, auto-detect)
+        package_path: Path to package root
+    """
+    import xml.etree.ElementTree as ET
+    import yaml
+
+    # Auto-detect poses file if not provided
+    if poses_yaml_path is None:
+        poses_yaml_path = package_path / "config" / "mujoco" / "initial_poses.yaml"
+
+    if not poses_yaml_path.exists():
+        print(f"  No keyframe poses file found at {poses_yaml_path}")
+        return
+
+    try:
+        # Load poses from YAML
+        with open(poses_yaml_path) as f:
+            poses_data = yaml.safe_load(f)
+
+        if not poses_data or "poses" not in poses_data:
+            print("  No poses defined in YAML file")
+            return
+
+        poses = poses_data["poses"]
+
+        # Read MJCF to get joint information
+        tree = ET.parse(mjcf_path)
+        root = tree.getroot()
+
+        # Get list of joints from MJCF
+        mjcf_joints = []
+        for joint_elem in root.findall(".//joint"):
+            joint_name = joint_elem.get("name", "")
+            if joint_name and joint_name.startswith("openarm_"):
+                # Strip prefix for matching with YAML
+                simple_name = joint_name.replace("openarm_", "")
+                mjcf_joints.append(simple_name)
+
+        if not mjcf_joints:
+            print("  No joints found in MJCF")
+            return
+
+        num_joints = len(mjcf_joints)
+        print(f"  Found {num_joints} joints in MJCF: {mjcf_joints}")
+
+        # Remove any existing keyframe element
+        for kf in root.findall("keyframe"):
+            root.remove(kf)
+
+        # Create new keyframe element
+        keyframe_elem = ET.SubElement(root, "keyframe")
+
+        added_keyframes = 0
+        for pose_name, pose_data in poses.items():
+            if not isinstance(pose_data, dict):
+                continue
+
+            # Build qpos vector in MJCF joint order
+            qpos_values = []
+            missing_joints = []
+
+            for joint_name in mjcf_joints:
+                if joint_name in pose_data:
+                    qpos_values.append(str(pose_data[joint_name]))
+                else:
+                    missing_joints.append(joint_name)
+                    qpos_values.append("0.0")  # Default to 0 if missing
+
+            # Warn if joints are missing
+            if missing_joints:
+                print(f"  Warning: Pose '{pose_name}' missing joints: {missing_joints}")
+
+            # Check if we have the right number of values
+            if len(qpos_values) != num_joints:
+                print(
+                    f"  Warning: Pose '{pose_name}' has {len(qpos_values)} values but MJCF has {num_joints} joints, skipping"
+                )
+                continue
+
+            # Add keyframe
+            qpos_str = " ".join(qpos_values)
+            ET.SubElement(keyframe_elem, "key", name=pose_name, qpos=qpos_str)
+            added_keyframes += 1
+            print(f"    Added keyframe '{pose_name}': {qpos_str}")
+
+        if added_keyframes == 0:
+            print("  No valid keyframes added")
+            return
+
+        # Format and write back
+        ET.indent(tree, space="  ", level=0)
+        tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
+
+        print(f"✓ Added {added_keyframes} keyframes from {poses_yaml_path.name}")
+
+    except Exception as e:
+        print(f"Warning: Could not add keyframes from YAML: {e}")
+        import traceback
+
+        traceback.print_exc()
 
 
 def add_actuators_to_mjcf(
     mjcf_path: Path,
     joint_limits_path: Path,
+    urdf_str: str = None,
     kp_pos=100.0,
     kv_pos=0.0,
     kv_vel=10.0,
@@ -274,9 +431,10 @@ def add_actuators_to_mjcf(
     Args:
         mjcf_path: Path to MJCF file
         joint_limits_path: Path to joint limits YAML file
-        kp_pos: Position actuator stiffness (default: 100.0, validated)
-        kv_pos: Position actuator damping (default: 0.0)
-        kv_vel: Velocity actuator gain (default: 10.0, validated)
+        urdf_str: URDF string to extract PID gains from (optional)
+        kp_pos: Default position actuator stiffness (used if not in URDF)
+        kv_pos: Default position actuator damping
+        kv_vel: Default velocity actuator gain
     """
     import xml.etree.ElementTree as ET
 
@@ -291,14 +449,76 @@ def add_actuators_to_mjcf(
     with open(joint_limits_path) as f:
         joint_limits = yaml.safe_load(f)
 
+    # Read PID gains from URDF if provided
+    urdf_gains = {}
+    if urdf_str:
+        urdf_gains = read_pid_gains_from_urdf(urdf_str)
+
     # Parse MJCF
     tree = ET.parse(mjcf_path)
     root = tree.getroot()
 
-    # Add multi-mode actuators
-    add_multi_mode_actuators(root, joint_limits, kp_pos, kv_pos, kv_vel)
+    # Add multi-mode actuators with per-joint gains from URDF
+    actuator_elem = ET.SubElement(root, "actuator")
+    num_joints = 0
 
-    # Write back
+    for joint_name, joint_data in joint_limits.items():
+        if not joint_name.startswith("joint"):
+            continue
+
+        limits = joint_data.get("limit", {})
+        lower = limits.get("lower", -math.pi)
+        upper = limits.get("upper", math.pi)
+        effort = limits.get("effort", 40.0)
+        velocity = limits.get("velocity", 3.0)
+
+        # Use URDF gains if available, otherwise defaults
+        if joint_name in urdf_gains:
+            joint_kp, joint_kd = urdf_gains[joint_name]
+            print(f"  Using URDF gains for {joint_name}: Kp={joint_kp}, Kd={joint_kd}")
+        else:
+            joint_kp = kp_pos
+            joint_kd = kv_vel  # Use velocity gain for damping
+
+        # 1. Position actuator
+        ET.SubElement(
+            actuator_elem,
+            "position",
+            name=f"act_pos_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            kp=str(joint_kp),
+            kv=str(kv_pos),  # Position actuator damping (usually 0)
+            ctrlrange=f"{lower} {upper}",
+            forcerange=f"-{effort} {effort}",
+        )
+
+        # 2. Velocity actuator (use Kd from URDF if available)
+        ET.SubElement(
+            actuator_elem,
+            "velocity",
+            name=f"act_vel_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            kv=str(joint_kd),  # Use URDF Kd as velocity actuator gain
+            ctrlrange=f"-{velocity} {velocity}",
+            forcerange=f"-{effort} {effort}",
+        )
+
+        # 3. Motor actuator
+        ET.SubElement(
+            actuator_elem,
+            "motor",
+            name=f"act_tau_openarm_{joint_name}",
+            joint=f"openarm_{joint_name}",
+            ctrlrange=f"-{effort} {effort}",
+            forcerange=f"-{effort} {effort}",
+        )
+
+        num_joints += 1
+
+    print(f"✓ Added {num_joints * 3} actuators ({num_joints} joints × 3 types)")
+
+    # Format and write back
+    ET.indent(tree, space="  ", level=0)
     tree.write(mjcf_path, encoding="utf-8", xml_declaration=True)
     print(f"✓ Added multi-mode actuators to {mjcf_path.name}")
 
@@ -503,9 +723,15 @@ def build_configuration(
         print("  Disabling gravity...")
         disable_gravity_in_mjcf(output_xml)
 
-    # Step 5: Add multi-mode actuators
+    # Step 5: Add multi-mode actuators (with URDF gains)
     joint_limits_path = package_path / "config" / "arm" / arm_type / "joint_limits.yaml"
-    add_actuators_to_mjcf(output_xml, joint_limits_path, kp_pos, kv_pos, kv_vel)
+    add_actuators_to_mjcf(
+        output_xml, joint_limits_path, urdf_str, kp_pos, kv_pos, kv_vel
+    )
+
+    # Step 6: Add keyframes from initial_poses.yaml
+    poses_yaml_path = package_path / "config" / "mujoco" / "initial_poses.yaml"
+    add_keyframes_from_yaml(output_xml, poses_yaml_path, package_path)
 
     print(f"✓ Complete: {config_name}\n")
 

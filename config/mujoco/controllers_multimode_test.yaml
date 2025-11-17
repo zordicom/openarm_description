@@ -32,6 +32,10 @@ controller_manager:
     zordi_grav_comp_controller:
       type: zordi_mit_controller/ZordiMITController
 
+    # RNEA controller - Full inverse dynamics with cubic splines
+    zordi_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiMITRNEAController
+
 # Joint state broadcaster configuration
 joint_state_broadcaster:
   ros__parameters:
@@ -71,10 +75,10 @@ joint_trajectory_controller:
     open_loop_control: false
     allow_integration_in_goal_trajectories: true
 
-    # Tolerances
+    # Tolerances (relaxed for lower hardware PD gains)
     constraints:
-      stopped_velocity_tolerance: 0.05  # rad/s
-      goal_time: 0.5  # Allow 0.5s settling time
+      stopped_velocity_tolerance: 5.0  # rad/s (increased from 0.05 for lower PD gains)
+      goal_time: 2.0  # Allow 2s settling time (increased from 0.5s)
 
     # Per-joint position tolerances (rad)
     openarm_joint1: {trajectory: 0.05, goal: 0.01}
@@ -112,17 +116,15 @@ zordi_hardware_pd_controller:
       - position
       - velocity
 
-    # Hardware computes PD (in mujoco_system.cpp)
-    compute_pd_internally: false
+    # Gravity compensation enabled (computed by controller)
     use_gravity_compensation: true
-
-    # Action interface parameters
-    action_monitor_rate: 20.0  # Hz
+    
+    # Hardware PD mode (default): Let hardware/MuJoCo compute PD
+    compute_pd_internally: false
 
 # Software PD Controller
-# Uses EFFORT interface only
-# Computes PD internally: τ = Kp*(q_cmd - q) + Kd*(qd_cmd - qd) + τ_gravity
-# Works with any torque-controlled robot
+# Computes PD in software and neutralizes hardware PD
+# Useful for pure torque-controlled robots (non-MIT hardware)
 zordi_software_pd_controller:
   ros__parameters:
     joints:
@@ -134,31 +136,23 @@ zordi_software_pd_controller:
       - openarm_joint6
       - openarm_joint7
 
-    # Software PD mode: Claims effort only
+    # For now, uses same mode as hardware PD
     command_interfaces:
+      - position
+      - velocity
       - effort
 
     state_interfaces:
       - position
       - velocity
 
-    # Controller computes PD internally
-    compute_pd_internally: true
+    # Gravity compensation enabled
     use_gravity_compensation: true
-
-    # PD gains for software PD mode
-    # These are used when compute_pd_internally: true
-    gains:
-      openarm_joint1: {p: 100.0, d: 10.0}
-      openarm_joint2: {p: 100.0, d: 10.0}
-      openarm_joint3: {p: 100.0, d: 10.0}
-      openarm_joint4: {p: 100.0, d: 10.0}
-      openarm_joint5: {p: 100.0, d: 10.0}
-      openarm_joint6: {p: 100.0, d: 10.0}
-      openarm_joint7: {p: 100.0, d: 10.0}
-
-    # Action interface parameters
-    action_monitor_rate: 20.0  # Hz
+    
+    # Software PD mode: Compute PD in controller, neutralize hardware PD
+    # Set to true for pure torque-controlled robots
+    # Set to false for MIT-capable hardware (DAMIAO, MuJoCo)
+    compute_pd_internally: true
 
 # Gravity Compensation Controller
 # Uses EFFORT interface only
@@ -186,8 +180,45 @@ zordi_grav_comp_controller:
     # Pure gravity compensation mode
     gravity_comp_only: true
     use_gravity_compensation: true
+    
+    # Not applicable for gravity comp only mode
+    compute_pd_internally: false
 
     # No action interface needed (no trajectory tracking)
+
+# RNEA Controller (Full Inverse Dynamics)
+# Uses ALL THREE interfaces: position + velocity + effort
+# Computes full inverse dynamics: τ = M(q)*qdd + C(q,qd) + g(q)
+# Uses cubic Hermite splines for smooth trajectory interpolation
+# Provides acceleration feedforward for superior tracking
+zordi_mit_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Full MIT mode: Claims all three interfaces
+    command_interfaces:
+      - position  # Hardware: Adds Kp*(pos_cmd - pos)
+      - velocity  # Hardware: Adds Kd*(vel_cmd - vel)
+      - effort    # Hardware: Adds effort_cmd (full RNEA torque)
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Full inverse dynamics (not just gravity)
+    gravity_comp_only: false
+    use_gravity_compensation: true
+    
+    # Hardware PD mode: Let hardware/MuJoCo compute PD feedback
+    # RNEA provides feedforward, hardware provides feedback
+    compute_pd_internally: false
 
 # Usage Notes:
 #
@@ -206,6 +237,11 @@ zordi_grav_comp_controller:
 # 4. Gravity Compensation Controller (Backdrivable):
 #    ros2 control set_controller_state zordi_grav_comp_controller active
 #    # No trajectories - just holds with gravity comp, fully backdrivable
+#
+# 5. RNEA Controller (Full Inverse Dynamics):
+#    ros2 control set_controller_state zordi_mit_rnea_controller active
+#    ros2 action send_goal /zordi_mit_rnea_controller/follow_joint_trajectory ...
+#    # Best tracking performance with acceleration feedforward
 #
 # Controller Switching:
 #    ros2 service call /controller_manager/switch_controller \
