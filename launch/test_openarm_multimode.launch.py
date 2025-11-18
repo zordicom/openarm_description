@@ -10,6 +10,9 @@ This launch file:
    - zordi_hardware_pd_controller (Hardware PD mode, MIT mode)
    - zordi_software_pd_controller (Software PD mode, effort only)
    - zordi_grav_comp_controller (Pure gravity compensation, backdrivable)
+   - zordi_mit_rnea_controller (Full inverse dynamics with cubic splines)
+   - zordi_cartesian_controller (Cartesian impedance control with nullspace)
+   - zordi_cartesian_rnea_controller (Advanced Cartesian with RNEA)
 3. Enables MuJoCo viewer for visualization
 4. Starts at specified initial keyframe (default: home)
 5. Simulation starts PAUSED (unpause via service)
@@ -25,26 +28,40 @@ Usage:
     # Check loaded controllers
     ros2 control list_controllers
 
-    # Activate a controller
+    # Activate a controller (joint space)
     ros2 control set_controller_state zordi_software_pd_controller active
 
+    # Activate a controller (Cartesian space)
+    ros2 control set_controller_state zordi_cartesian_controller active
+
 Available Controllers:
+    Joint Space:
     - joint_trajectory_controller: Standard ROS2 (pos+vel)
     - zordi_hardware_pd_controller: Hardware PD (pos+vel+eff, MIT mode)
     - zordi_software_pd_controller: Software PD (eff only, PD in controller)
     - zordi_grav_comp_controller: Gravity comp only (backdrivable)
     - zordi_mit_rnea_controller: Full inverse dynamics with cubic splines
+
+    Cartesian Space (7-DOF features):
+    - zordi_cartesian_controller: Cartesian impedance with nullspace control
+    - zordi_cartesian_rnea_controller: Advanced Cartesian with full RNEA
 """
+# NOTE: Controllers are loaded via CLI loader (ros2 control load_controller)
+# to avoid early parameter visibility issues with generate-parameter-library
+# controllers (e.g., zordi_cartesian_controller) when using the spawner node.
 
 from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    RegisterEventHandler,
+)
 from launch.event_handlers import OnProcessStart
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -70,40 +87,23 @@ def generate_launch_description():
     headless = LaunchConfiguration("headless")
 
     # Paths
-    urdf_file = pkg_share / "urdf" / "robot" / "v10.urdf.xacro"
-    # NOTE: The XML file was generated from URDF using scripts/urdf_to_mjcf.py
+    urdf_file = pkg_share / "mujoco_models" / "openarm_v10.urdf"
+    # NOTE: The URDF and XML files were generated from xacro using scripts/urdf_to_mjcf.py
     # This ensures Pinocchio and MuJoCo use identical inertial properties
-    mujoco_model = str(pkg_share / "mujoco_models" / "openarm_v10.xml")
-    controller_config = str(
+    mujoco_model = pkg_share / "mujoco_models" / "openarm_v10.xml"
+    controller_config = (
         pkg_share / "config" / "mujoco" / "controllers_multimode_test.yaml"
     )
 
-    # Generate robot description
-    robot_description_content = Command(
-        [
-            FindExecutable(name="xacro"),
-            " ",
-            str(urdf_file),
-            " ",
-            "ros2_control:=true",
-            " ",
-            "use_mujoco:=true",
-            " ",
-            "hand:=false",
-            " ",
-            "bimanual:=false",
-        ]
-    )
-    robot_description = {
-        "robot_description": ParameterValue(robot_description_content, value_type=str)
-    }
+    # Read URDF directly (like planar 2-DoF pattern)
+    robot_description = Path(urdf_file).read_text()
 
     # Robot state publisher (required for gravity compensation)
     # Controllers fetch robot_description from this node to initialize Pinocchio
     robot_state_pub_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[robot_description],
+        parameters=[{"robot_description": robot_description}],
         output="screen",
     )
 
@@ -112,14 +112,14 @@ def generate_launch_description():
         package="mujoco_ros2_control",
         executable="mujoco_ros2_control",
         parameters=[
-            robot_description,
+            str(controller_config),
             {
-                "mujoco_model_path": mujoco_model,
+                "robot_description": robot_description,
+                "mujoco_model_path": str(mujoco_model),
                 "headless": headless,
                 "unpause": True,
                 "initial_keyframe": initial_keyframe,
             },
-            controller_config,
         ],
         output="screen",
     )
@@ -172,20 +172,62 @@ def generate_launch_description():
         output="screen",
     )
 
+    # Load joint_state_broadcaster (active) via CLI loader pattern
+    load_joint_state_broadcaster = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "control",
+            "load_controller",
+            "--set-state",
+            "active",
+            "joint_state_broadcaster",
+        ],
+        output="screen",
+    )
+
+    # Load zordi_cartesian_controller (inactive) via CLI loader pattern
+    load_cartesian = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "control",
+            "load_controller",
+            "--set-state",
+            "inactive",
+            "zordi_cartesian_controller",
+        ],
+        output="screen",
+    )
+
+    # Load zordi_cartesian_rnea_controller (inactive) via CLI loader pattern
+    load_cartesian_rnea = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "control",
+            "load_controller",
+            "--set-state",
+            "inactive",
+            "zordi_cartesian_rnea_controller",
+        ],
+        output="screen",
+    )
+
     nodes_to_start = [
         robot_state_pub_node,  # Start first so controllers can fetch robot_description
         mujoco_node,
-        # Start controllers when mujoco node starts
+        # Load controllers when mujoco node starts (NO DELAY - like planar 2-DoF)
         RegisterEventHandler(
             event_handler=OnProcessStart(
                 target_action=mujoco_node,
                 on_start=[
-                    spawn_joint_broadcaster,
+                    # Load only cartesian controller for now
+                    load_joint_state_broadcaster,
                     load_jtc,
                     load_hw_pd,
                     load_sw_pd,
                     load_grav_comp,
                     load_rnea,
+                    load_cartesian,
+                    load_cartesian_rnea,
                 ],
             )
         ),

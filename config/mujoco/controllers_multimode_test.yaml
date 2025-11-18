@@ -36,6 +36,14 @@ controller_manager:
     zordi_mit_rnea_controller:
       type: zordi_mit_controller/ZordiMITRNEAController
 
+    # Cartesian impedance controller (basic)
+    zordi_cartesian_controller:
+      type: zordi_mit_controller/ZordiCartesianController
+
+    # Cartesian controller with RNEA (advanced)
+    zordi_cartesian_rnea_controller:
+      type: zordi_mit_controller/ZordiCartesianRNEAController
+
 # Joint state broadcaster configuration
 joint_state_broadcaster:
   ros__parameters:
@@ -118,7 +126,7 @@ zordi_hardware_pd_controller:
 
     # Gravity compensation enabled (computed by controller)
     use_gravity_compensation: true
-    
+
     # Hardware PD mode (default): Let hardware/MuJoCo compute PD
     compute_pd_internally: false
 
@@ -148,7 +156,7 @@ zordi_software_pd_controller:
 
     # Gravity compensation enabled
     use_gravity_compensation: true
-    
+
     # Software PD mode: Compute PD in controller, neutralize hardware PD
     # Set to true for pure torque-controlled robots
     # Set to false for MIT-capable hardware (DAMIAO, MuJoCo)
@@ -180,7 +188,7 @@ zordi_grav_comp_controller:
     # Pure gravity compensation mode
     gravity_comp_only: true
     use_gravity_compensation: true
-    
+
     # Not applicable for gravity comp only mode
     compute_pd_internally: false
 
@@ -215,10 +223,112 @@ zordi_mit_rnea_controller:
     # Full inverse dynamics (not just gravity)
     gravity_comp_only: false
     use_gravity_compensation: true
-    
+
     # Hardware PD mode: Let hardware/MuJoCo compute PD feedback
     # RNEA provides feedforward, hardware provides feedback
     compute_pd_internally: false
+
+# Zordi Cartesian Controller
+zordi_cartesian_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_link7"
+    base_frame: "openarm_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 10.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: false
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 0.5
+    max_cartesian_acceleration: 2.0
+
+# Zordi Cartesian RNEA Controller
+zordi_cartesian_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_link7"
+    base_frame: "openarm_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 20.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: true
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 1.0
+    max_cartesian_acceleration: 5.0
 
 # Usage Notes:
 #
@@ -242,6 +352,14 @@ zordi_mit_rnea_controller:
 #    ros2 control set_controller_state zordi_mit_rnea_controller active
 #    ros2 action send_goal /zordi_mit_rnea_controller/follow_joint_trajectory ...
 #    # Best tracking performance with acceleration feedforward
+#
+# 6. Cartesian Controller (Cartesian Impedance):
+#    ros2 control set_controller_state zordi_cartesian_controller active
+#    ros2 topic pub --once /zordi_cartesian_controller/target_pose ...
+#
+# 7. Cartesian RNEA Controller (Advanced Cartesian):
+#    ros2 control set_controller_state zordi_cartesian_rnea_controller active
+#    ros2 topic pub --once /zordi_cartesian_rnea_controller/target_pose ...
 #
 # Controller Switching:
 #    ros2 service call /controller_manager/switch_controller \
