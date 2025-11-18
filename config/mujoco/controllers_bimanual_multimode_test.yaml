@@ -1,0 +1,540 @@
+# OpenARM Bimanual Multimode Testing Configuration
+#
+# Copyright 2025 Zordi, Inc. All rights reserved.
+#
+# This configuration loads multiple controllers for comprehensive bimanual testing.
+# Each arm has its own set of controllers for independent control.
+
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Hz - Match MuJoCo's 1ms timestep
+
+    # Joint state broadcaster (always active)
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # Left arm controllers
+    left_joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    left_zordi_hardware_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    left_zordi_software_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    left_zordi_grav_comp_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    left_zordi_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiMITRNEAController
+
+    left_zordi_cartesian_controller:
+      type: zordi_mit_controller/ZordiCartesianController
+
+    left_zordi_cartesian_rnea_controller:
+      type: zordi_mit_controller/ZordiCartesianRNEAController
+
+    # Right arm controllers
+    right_joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_zordi_hardware_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    right_zordi_software_pd_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    right_zordi_grav_comp_controller:
+      type: zordi_mit_controller/ZordiMITController
+
+    right_zordi_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiMITRNEAController
+
+    right_zordi_cartesian_controller:
+      type: zordi_mit_controller/ZordiCartesianController
+
+    right_zordi_cartesian_rnea_controller:
+      type: zordi_mit_controller/ZordiCartesianRNEAController
+
+# Joint state broadcaster configuration
+joint_state_broadcaster:
+  ros__parameters:
+    publish_rate: 100  # Hz
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+# ============================================================================
+# LEFT ARM CONTROLLERS
+# ============================================================================
+
+left_joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+
+    state_interfaces:
+      - position
+      - velocity
+
+    allow_partial_joints_goal: false
+    open_loop_control: false
+    allow_integration_in_goal_trajectories: true
+
+    constraints:
+      stopped_velocity_tolerance: 5.0
+      goal_time: 2.0
+
+    openarm_left_joint1: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint2: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint3: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint4: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint5: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint6: {trajectory: 0.05, goal: 0.01}
+    openarm_left_joint7: {trajectory: 0.05, goal: 0.01}
+
+left_zordi_hardware_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+left_zordi_software_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    use_gravity_compensation: true
+    compute_pd_internally: true
+
+left_zordi_grav_comp_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: true
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+left_zordi_mit_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: false
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+left_zordi_cartesian_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_left_link7"
+    base_frame: "openarm_left_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 10.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: false
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 0.5
+    max_cartesian_acceleration: 2.0
+
+left_zordi_cartesian_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_left_link7"
+    base_frame: "openarm_left_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 20.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: true
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 1.0
+    max_cartesian_acceleration: 5.0
+
+# ============================================================================
+# RIGHT ARM CONTROLLERS
+# ============================================================================
+
+right_joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+
+    state_interfaces:
+      - position
+      - velocity
+
+    allow_partial_joints_goal: false
+    open_loop_control: false
+    allow_integration_in_goal_trajectories: true
+
+    constraints:
+      stopped_velocity_tolerance: 5.0
+      goal_time: 2.0
+
+    openarm_right_joint1: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint2: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint3: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint4: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint5: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint6: {trajectory: 0.05, goal: 0.01}
+    openarm_right_joint7: {trajectory: 0.05, goal: 0.01}
+
+right_zordi_hardware_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+right_zordi_software_pd_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    use_gravity_compensation: true
+    compute_pd_internally: true
+
+right_zordi_grav_comp_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: true
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+right_zordi_mit_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: false
+    use_gravity_compensation: true
+    compute_pd_internally: false
+
+right_zordi_cartesian_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_right_link7"
+    base_frame: "openarm_right_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 10.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: false
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 0.5
+    max_cartesian_acceleration: 2.0
+
+right_zordi_cartesian_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+    command_interfaces:
+      - position
+      - velocity
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    compute_pd_internally: false
+    end_effector_frame: "openarm_right_link7"
+    base_frame: "openarm_right_link0"
+    stiffness:
+      translation:
+        x: 500.0
+        y: 500.0
+        z: 500.0
+      rotation:
+        x: 50.0
+        y: 50.0
+        z: 50.0
+    damping:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+    nullspace:
+      stiffness: 20.0
+      damping: 0.0
+      weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      projector_type: "dynamic"
+    use_operational_space: true
+    use_gravity_compensation: true
+    use_coriolis_compensation: false
+    torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
+    max_cartesian_velocity: 1.0
+    max_cartesian_acceleration: 5.0

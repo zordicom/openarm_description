@@ -141,4 +141,60 @@
     <framequat name="orientation" objtype="site" noise="0.001" objname="imu" />
     <gyro name="angular-velocity" site="imu" noise="0.005" cutoff="34.9" />
   </sensor>
-<actuator><position name="act_pos_openarm_joint1" joint="openarm_joint1" kp="100.0" kv="0.0" ctrlrange="-1.396263 3.490659" forcerange="-40 40" /><velocity name="act_vel_openarm_joint1" joint="openarm_joint1" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" /><motor name="act_tau_openarm_joint1" joint="openarm_joint1" ctrlrange="-40 40" forcerange="-40 40" /><position name="act_pos_openarm_joint2" joint="openarm_joint2" kp="100.0" kv="0.0" ctrlrange="-1.745329 1.745329" forcerange="-40 40" /><velocity name="act_vel_openarm_joint2" joint="openarm_joint2" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" /><motor name="act_tau_openarm_joint2" joint="openarm_joint2" ctrlrange="-40 40" forcerange="-40 40" /><position name="act_pos_openarm_joint3" joint="openarm_joint3" kp="100.0" kv="0.0" ctrlrange="-1.570796 1.570796" forcerange="-27 27" /><velocity name="act_vel_openarm_joint3" joint="openarm_joint3" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" /><motor name="act_tau_openarm_joint3" joint="openarm_joint3" ctrlrange="-27 27" forcerange="-27 27" /><position name="act_pos_openarm_joint4" joint="openarm_joint4" kp="100.0" kv="0.0" ctrlrange="0.0 2.443461" forcerange="-27 27" /><velocity name="act_vel_openarm_joint4" joint="openarm_joint4" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" /><motor name="act_tau_openarm_joint4" joint="openarm_joint4" ctrlrange="-27 27" forcerange="-27 27" /><position name="act_pos_openarm_joint5" joint="openarm_joint5" kp="100.0" kv="0.0" ctrlrange="-1.570796 1.570796" forcerange="-7 7" /><velocity name="act_vel_openarm_joint5" joint="openarm_joint5" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" /><motor name="act_tau_openarm_joint5" joint="openarm_joint5" ctrlrange="-7 7" forcerange="-7 7" /><position name="act_pos_openarm_joint6" joint="openarm_joint6" kp="100.0" kv="0.0" ctrlrange="-0.785398 0.785398" forcerange="-7 7" /><velocity name="act_vel_openarm_joint6" joint="openarm_joint6" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" /><motor name="act_tau_openarm_joint6" joint="openarm_joint6" ctrlrange="-7 7" forcerange="-7 7" /><position name="act_pos_openarm_joint7" joint="openarm_joint7" kp="100.0" kv="0.0" ctrlrange="-1.570796 1.570796" forcerange="-7 7" /><velocity name="act_vel_openarm_joint7" joint="openarm_joint7" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" /><motor name="act_tau_openarm_joint7" joint="openarm_joint7" ctrlrange="-7 7" forcerange="-7 7" /></actuator></mujoco>
+<actuator>
+    <!-- Left arm actuators -->
+    <position name="act_pos_openarm_left_joint1" joint="openarm_left_joint1" kp="100.0" kv="0.0" ctrlrange="-3.49066 1.39626" forcerange="-40 40" />
+    <velocity name="act_vel_openarm_left_joint1" joint="openarm_left_joint1" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" />
+    <motor name="act_tau_openarm_left_joint1" joint="openarm_left_joint1" ctrlrange="-40 40" forcerange="-40 40" />
+    <position name="act_pos_openarm_left_joint2" joint="openarm_left_joint2" kp="100.0" kv="0.0" ctrlrange="-3.31613 0.174533" forcerange="-40 40" />
+    <velocity name="act_vel_openarm_left_joint2" joint="openarm_left_joint2" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" />
+    <motor name="act_tau_openarm_left_joint2" joint="openarm_left_joint2" ctrlrange="-40 40" forcerange="-40 40" />
+    <position name="act_pos_openarm_left_joint3" joint="openarm_left_joint3" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-27 27" />
+    <velocity name="act_vel_openarm_left_joint3" joint="openarm_left_joint3" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" />
+    <motor name="act_tau_openarm_left_joint3" joint="openarm_left_joint3" ctrlrange="-27 27" forcerange="-27 27" />
+    <position name="act_pos_openarm_left_joint4" joint="openarm_left_joint4" kp="100.0" kv="0.0" ctrlrange="0.0 2.44346" forcerange="-27 27" />
+    <velocity name="act_vel_openarm_left_joint4" joint="openarm_left_joint4" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" />
+    <motor name="act_tau_openarm_left_joint4" joint="openarm_left_joint4" ctrlrange="-27 27" forcerange="-27 27" />
+    <position name="act_pos_openarm_left_joint5" joint="openarm_left_joint5" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_left_joint5" joint="openarm_left_joint5" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_left_joint5" joint="openarm_left_joint5" ctrlrange="-7 7" forcerange="-7 7" />
+    <position name="act_pos_openarm_left_joint6" joint="openarm_left_joint6" kp="100.0" kv="0.0" ctrlrange="-0.785398 0.785398" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_left_joint6" joint="openarm_left_joint6" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_left_joint6" joint="openarm_left_joint6" ctrlrange="-7 7" forcerange="-7 7" />
+    <position name="act_pos_openarm_left_joint7" joint="openarm_left_joint7" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_left_joint7" joint="openarm_left_joint7" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_left_joint7" joint="openarm_left_joint7" ctrlrange="-7 7" forcerange="-7 7" />
+    <!-- Right arm actuators -->
+    <position name="act_pos_openarm_right_joint1" joint="openarm_right_joint1" kp="100.0" kv="0.0" ctrlrange="-1.39626 3.49066" forcerange="-40 40" />
+    <velocity name="act_vel_openarm_right_joint1" joint="openarm_right_joint1" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" />
+    <motor name="act_tau_openarm_right_joint1" joint="openarm_right_joint1" ctrlrange="-40 40" forcerange="-40 40" />
+    <position name="act_pos_openarm_right_joint2" joint="openarm_right_joint2" kp="100.0" kv="0.0" ctrlrange="-0.174533 3.31613" forcerange="-40 40" />
+    <velocity name="act_vel_openarm_right_joint2" joint="openarm_right_joint2" kv="10.0" ctrlrange="-16.754666 16.754666" forcerange="-40 40" />
+    <motor name="act_tau_openarm_right_joint2" joint="openarm_right_joint2" ctrlrange="-40 40" forcerange="-40 40" />
+    <position name="act_pos_openarm_right_joint3" joint="openarm_right_joint3" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-27 27" />
+    <velocity name="act_vel_openarm_right_joint3" joint="openarm_right_joint3" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" />
+    <motor name="act_tau_openarm_right_joint3" joint="openarm_right_joint3" ctrlrange="-27 27" forcerange="-27 27" />
+    <position name="act_pos_openarm_right_joint4" joint="openarm_right_joint4" kp="100.0" kv="0.0" ctrlrange="0.0 2.44346" forcerange="-27 27" />
+    <velocity name="act_vel_openarm_right_joint4" joint="openarm_right_joint4" kv="10.0" ctrlrange="-5.445426 5.445426" forcerange="-27 27" />
+    <motor name="act_tau_openarm_right_joint4" joint="openarm_right_joint4" ctrlrange="-27 27" forcerange="-27 27" />
+    <position name="act_pos_openarm_right_joint5" joint="openarm_right_joint5" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_right_joint5" joint="openarm_right_joint5" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_right_joint5" joint="openarm_right_joint5" ctrlrange="-7 7" forcerange="-7 7" />
+    <position name="act_pos_openarm_right_joint6" joint="openarm_right_joint6" kp="100.0" kv="0.0" ctrlrange="-0.785398 0.785398" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_right_joint6" joint="openarm_right_joint6" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_right_joint6" joint="openarm_right_joint6" ctrlrange="-7 7" forcerange="-7 7" />
+    <position name="act_pos_openarm_right_joint7" joint="openarm_right_joint7" kp="100.0" kv="0.0" ctrlrange="-1.5708 1.5708" forcerange="-7 7" />
+    <velocity name="act_vel_openarm_right_joint7" joint="openarm_right_joint7" kv="10.0" ctrlrange="-20.943946 20.943946" forcerange="-7 7" />
+    <motor name="act_tau_openarm_right_joint7" joint="openarm_right_joint7" ctrlrange="-7 7" forcerange="-7 7" />
+  </actuator>
+
+  <keyframe>
+    <key name="home" qpos="0.0 -0.785 0.0 1.57 0.0 0.0 0.0 0.0 0.785 0.0 1.57 0.0 0.0 0.0" />
+    <!-- Canonical/zero pose: all joints at zero -->
+    <key name="canonical" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
+    <!-- Right arm extended: right elbow extended (joint4: 1.57 -> 1.0) -->
+    <key name="extended" qpos="0.0 -0.785 0.0 1.57 0.0 0.0 0.0 0.0 0.785 0.0 1.0 0.0 0.0 0.0" />
+    <!-- Symmetric outward pose: both arms reaching outward -->
+    <key name="pose1" qpos="0.0 0.0 0.0 1.4 0.2 -0.5 0.12 0.0 0.0 0.0 1.4 -0.2 0.5 0.12" />
+  </keyframe>
+</mujoco>
