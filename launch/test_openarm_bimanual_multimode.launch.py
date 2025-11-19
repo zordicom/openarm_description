@@ -224,13 +224,13 @@ def generate_launch_description():
                 on_start=[
                     load_joint_state_broadcaster,
                     # Right arm controllers
-                    # load_right_jtc,
-                    # load_right_hw_pd,
-                    # load_right_sw_pd,
+                    load_right_jtc,
+                    load_right_hw_pd,
+                    load_right_sw_pd,
                     load_right_grav_comp,
-                    # load_right_rnea,
-                    # load_right_cartesian,
-                    # load_right_cartesian_rnea,
+                    load_right_rnea,
+                    load_right_cartesian,
+                    load_right_cartesian_rnea,
                 ],
             )
         ),

@@ -1,13 +1,13 @@
-# Cartesian Controller Quick Start - Bimanual
+# Cartesian Controller Quick Start - Right Arm
 
 **Status:** ✅ Ready for Testing
-**Last Updated:** November 18, 2025
+**Last Updated:** November 19, 2025
 
 ---
 
 ## Overview
 
-This guide covers the bimanual OpenARM setup with **two 7-DOF arms (14 joints total), no hands**. Each arm has its own set of controllers for independent control.
+This guide covers the right arm OpenARM setup (single 7-DOF arm, bimanual shoulder mounting style). This configuration uses the right arm extracted from the bimanual URDF, mounted with the same shoulder geometry as the bimanual setup.
 
 ---
 
@@ -17,118 +17,180 @@ This guide covers the bimanual OpenARM setup with **two 7-DOF arms (14 joints to
 cd /home/gilwoo/ros2_ws
 source install/setup.bash
 
-# Launch full bimanual multimode system
+# Launch right arm system (starts from "extended" keyframe by default)
 ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py
 
 # In another terminal (after sourcing):
 ros2 control list_controllers
 
-# Activate left arm controller
-ros2 control set_controller_state left_zordi_cartesian_controller active
-
-# Activate right arm controller
+# Activate right arm Cartesian controller
 ros2 control set_controller_state right_zordi_cartesian_controller active
 ```
 
 ---
 
-## Configuration Requirements
+## Controller Configuration Requirements ("controllers_bimanual_multimode_test.yaml")
 
 ### 1. Torque Limits Must Be Explicit
 
-Each arm requires explicit torque limits:
+The right arm requires explicit torque limits:
 
 ```yaml
-# Left arm
-torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
-
-# Right arm
 torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
 ```
 
-### 2. Frame Names Must Exist in URDF
+### 2. Frame Names Must Be Configured in Controller Config
+
+These parameters are set in `controllers_bimanual_multimode_test.yaml` for each Cartesian controller:
 
 ```yaml
-# Left arm
-end_effector_frame: "openarm_left_link7"
-base_frame: "openarm_left_link0"
-
-# Right arm
+# For right_zordi_cartesian_controller (lines 466-467):
 end_effector_frame: "openarm_right_link7"
 base_frame: "openarm_right_link0"
+
+# These frame names must exist in the URDF!
 ```
 
 ---
 
 ## Available Controllers
 
-### Left Arm Controllers
-
-1. **left_joint_trajectory_controller** - Standard ROS2 (position+velocity)
-2. **left_zordi_hardware_pd_controller** - Hardware PD (MIT mode)
-3. **left_zordi_software_pd_controller** - Software PD (effort only)
-4. **left_zordi_grav_comp_controller** - Pure gravity compensation (backdrivable)
-5. **left_zordi_mit_rnea_controller** - Full inverse dynamics with cubic splines
-6. **left_zordi_cartesian_controller** - Cartesian impedance with nullspace control
-7. **left_zordi_cartesian_rnea_controller** - Advanced Cartesian with full RNEA
-
 ### Right Arm Controllers
 
 1. **right_joint_trajectory_controller** - Standard ROS2 (position+velocity)
-2. **right_zordi_hardware_pd_controller** - Hardware PD (MIT mode)
-3. **right_zordi_software_pd_controller** - Software PD (effort only)
-4. **right_zordi_grav_comp_controller** - Pure gravity compensation (backdrivable)
-5. **right_zordi_mit_rnea_controller** - Full inverse dynamics with cubic splines
-6. **right_zordi_cartesian_controller** - Cartesian impedance with nullspace control
-7. **right_zordi_cartesian_rnea_controller** - Advanced Cartesian with full RNEA
+2. **right_zordi_grav_comp_controller** - Pure gravity compensation
+3. **right_zordi_hardware_pd_controller** - Hardware PD (MIT mode)
+4. **right_zordi_software_pd_controller** - Software PD (effort control)
+5. **right_zordi_mit_rnea_controller** - Joint trajectory tracking with RNEA feedforward (MIT mode)
+6. **right_zordi_cartesian_controller** - Cartesian impedance with nullspace control (MIT mode)
+7. **right_zordi_cartesian_rnea_controller** - Cartesian impedance with RNEA feedforward (MIT mode)
+
+### MIT Mode Explanation
+
+The controllers marked with **(MIT mode)** utilize all three command interfaces (`position`, `velocity`, `effort`) simultaneously to achieve high-performance control:
+
+1. **Position (`q_cmd`)**: Sends the desired joint position (computed via differential IK) to the hardware.
+2. **Velocity (`qd_cmd`)**: Sends **0.0** velocity. This effectively uses the hardware's D-gain to damp the system (`Kd * (0 - q_vel)`).
+3. **Effort (`tau_ff`)**: Sends the computed feedforward torque (Gravity + Coriolis + Task Forces + Nullspace).
+
+This combination allows the hardware (or simulator) to run a high-frequency PD loop around the setpoints while the controller provides the complex dynamics feedforward.
 
 ---
 
 ## Usage Examples
 
-### Activate Both Cartesian Controllers
+### Method 1: Topic-Based Control (Simple, Immediate)
+
+Send target poses directly to the controller. The controller smoothly interpolates to the target.
+
+**Example: Move to Home Position**
 
 ```bash
-# Activate left arm
-ros2 control set_controller_state left_zordi_cartesian_controller active
+ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
+  geometry_msgs/msg/PoseStamped \
+  "{
+    header: {
+      stamp: {sec: 0, nanosec: 0},
+      frame_id: 'openarm_right_link0'
+    },
+    pose: {
+      position: {x: 0.216000, y: -0.155747, z: 0.278123},
+      orientation: {x: 0.270836, y: 0.652967, z: 0.270620, w: 0.653488}
+    }
+  }"
+```
 
-# Activate right arm
+### Method 2: Action-Based Control (Trajectory with Timing)
+
+Use actions for precise timing and feedback. Recommended for smoother, more controlled motions.
+
+**Example: Move to Home Position Over 3 Seconds**
+
+```bash
+ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartesian_trajectory \
+  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
+  "{
+    trajectory: {
+      points: [
+        {
+          point: {
+            pose: {
+              position: {x: 0.216000, y: -0.155747, z: 0.278123},
+              orientation: {x: 0.270836, y: 0.652967, z: 0.270620, w: 0.653488}
+            }
+          },
+          time_from_start: {sec: 3, nanosec: 0}
+        }
+      ]
+    }
+  }"
+```
+
+### Keyframe Cartesian Poses (All in Base Frame: openarm_right_link0)
+Keyframes are defined in "openarm_v10_right_arm_proper.xml"
+
+#### **Home** (joint4 = 1.57 rad, elbow bent)
+
+```yaml
+position: {x: 0.216000, y: -0.155747, z: 0.278123}
+orientation: {x: 0.270836, y: 0.652967, z: 0.270620, w: 0.653488}
+```
+
+#### **Extended** (joint4 = 1.0 rad, elbow more extended)
+
+```yaml
+position: {x: 0.181758, y: -0.238181, z: 0.360492}
+orientation: {x: 0.335998, y: 0.442895, z: 0.183556, w: 0.810714}
+```
+
+#### **Canonical** (all joints = 0)
+
+```yaml
+position: {x: 0.000000, y: -0.436000, z: 0.122500}
+orientation: {x: 0.707107, y: 0.000000, z: 0.000000, w: 0.707107}
+```
+
+#### **Pose1** (reaching outward)
+
+```yaml
+position: {x: 0.212857, y: -0.256713, z: 0.122500}
+orientation: {x: 0.604925, y: 0.615794, z: 0.298166, w: 0.407383}
+```
+
+### Test Sequence: Extended → Home → Extended
+
+**Step 1: Activate Controller**
+
+```bash
+ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py  initial_keyframe:="extended"
+# or ros2 service call /reset_to_keyframe   mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'extended'}"
 ros2 control set_controller_state right_zordi_cartesian_controller active
+ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
-### Send Target Pose to Left Arm
+**Step 2: Move to Home (from default "extended" startup)**
 
 ```bash
-ros2 topic pub /left_zordi_cartesian_controller/target_pose \
-  geometry_msgs/msg/PoseStamped \
+ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartesian_trajectory \
+  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
-    header: {
-      stamp: {sec: 0, nanosec: 0},
-      frame_id: 'openarm_left_link0'
-    },
-    pose: {
-      position: {
-        x: -0.110293,
-        y: 0.114208,
-        z: 0.296562
-      },
-      orientation: {
-        x: -0.142549,
-        y: -0.371741,
-        z: 0.826390,
-        w: 0.398207
-      }
+    trajectory: {
+      points: [
+        {
+          point: {
+            pose: {
+              position: {x: 0.216000, y: -0.155747, z: 0.278123},
+              orientation: {x: 0.270836, y: 0.652967, z: 0.270620, w: 0.653488}
+            }
+          },
+          time_from_start: {sec: 3, nanosec: 0}
+        }
+      ]
     }
   }"
 ```
 
-### Send Target Pose to Right Arm
-
-**Test Sequence: Home → Extended**
-
-This example shows the right arm moving from its home position to an extended configuration.
-
-**Step 1: Move to Home Position** (joint4 = 1.57 rad):
+**Step 3: Move Back to Extended**
 
 ```bash
 ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
@@ -139,204 +201,11 @@ ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
       frame_id: 'openarm_right_link0'
     },
     pose: {
-      position: {
-        x: 0.216000,
-        y: -0.155747,
-        z: 0.278123
-      },
-      orientation: {
-        x: 0.270836,
-        y: 0.652967,
-        z: 0.270620,
-        w: 0.653488
-      }
+      position: {x: 0.181758, y: -0.238181, z: 0.360492},
+      orientation: {x: 0.335998, y: 0.442895, z: 0.183556, w: 0.810714}
     }
   }"
 ```
-
-**Step 2: Wait for convergence, then move to Extended Position** (joint4 = 1.0 rad, elbow extends ~12 cm):
-
-```bash
-ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
-  geometry_msgs/msg/PoseStamped \
-  "{
-    header: {
-      stamp: {sec: 0, nanosec: 0},
-      frame_id: 'openarm_right_link0'
-    },
-    pose: {
-      position: {
-        x: 0.181758,
-        y: -0.238181,
-        z: 0.360492
-      },
-      orientation: {
-        x: 0.335998,
-        y: 0.442895,
-        z: 0.183556,
-        w: 0.810714
-      }
-    }
-  }"
-```
-
-> **Note:** The `--once` flag sends a single message and exits. The controller will smoothly move to each target using internal trajectory generation.
-
-### Coordinated Bimanual Control
-
-```bash
-# Activate both gravity compensation controllers for backdrivable mode
-ros2 control set_controller_state left_zordi_grav_comp_controller active
-ros2 control set_controller_state right_zordi_grav_comp_controller active
-
-# Or activate both Cartesian RNEA controllers for synchronized control
-ros2 control set_controller_state left_zordi_cartesian_rnea_controller active
-ros2 control set_controller_state right_zordi_cartesian_rnea_controller active
-```
+This would result in more jerkey motion than the trajectory version above. Check the joint states to confirm that it's roughly at the extended pose.
 
 ---
-
-## Joint Names
-
-### Left Arm Joints
-
-```yaml
-joints:
-  - openarm_left_joint1
-  - openarm_left_joint2
-  - openarm_left_joint3
-  - openarm_left_joint4
-  - openarm_left_joint5
-  - openarm_left_joint6
-  - openarm_left_joint7
-```
-
-### Right Arm Joints
-
-```yaml
-joints:
-  - openarm_right_joint1
-  - openarm_right_joint2
-  - openarm_right_joint3
-  - openarm_right_joint4
-  - openarm_right_joint5
-  - openarm_right_joint6
-  - openarm_right_joint7
-```
-
----
-
-## Control Modes
-
-### Software PD Mode (`compute_pd_internally: true`)
-
-- **Interfaces:** `effort` only
-- **Control:** Pure torque control with software PD damping
-- **Use case:** Pure torque-controlled robots
-
-### Hardware PD Mode (`compute_pd_internally: false`)
-
-- **Interfaces:** `position`, `velocity`, `effort`
-- **Control:** Hardware PD + feedforward torques
-- **Use case:** MIT-capable hardware (DAMIAO, MuJoCo)
-
----
-
-## Troubleshooting
-
-### Controller Won't Load
-
-Check the console output for validation errors. Common issues:
-
-1. **Empty torque_limits:** Add explicit values for each arm
-2. **Wrong frame names:** Verify frames exist in URDF with correct prefixes
-3. **Array size mismatch:** Ensure arrays match joint count (7 per arm)
-4. **Mixed joint names:** Ensure left/right prefixes are consistent
-
-### Only One Arm Working
-
-Verify that:
-
-- Both arms have ros2_control interfaces defined in URDF
-- Joint names match between URDF, XML, and controller config
-- Both arms' actuators are properly defined in the MuJoCo XML
-
-### Controllers Conflict
-
-Remember:
-
-- Only ONE controller can be active per arm at a time
-- Controllers don't share joints between arms
-- Use `--set-state inactive` when switching controllers
-
----
-
-## Files
-
-- **URDF:** `mujoco_models/openarm_v10_bimanual.urdf`
-- **MuJoCo XML:** `mujoco_models/openarm_v10_bimanual.xml`
-- **Controller Config:** `config/mujoco/controllers_bimanual_multimode_test.yaml`
-- **Launch File:** `launch/test_openarm_bimanual_multimode.launch.py`
-
----
-
-## Controller Switching
-
-### Switch Controllers on Same Arm
-
-```bash
-# Switch left arm from Cartesian to gravity comp
-ros2 service call /controller_manager/switch_controller \
-  controller_manager_msgs/srv/SwitchController \
-  "{activate_controllers: ['left_zordi_grav_comp_controller'],
-    deactivate_controllers: ['left_zordi_cartesian_controller'],
-    strictness: 2}"
-```
-
-### Independent Arm Control
-
-```bash
-# Left arm: Cartesian control
-ros2 control set_controller_state left_zordi_cartesian_controller active
-
-# Right arm: Gravity compensation
-ros2 control set_controller_state right_zordi_grav_comp_controller active
-```
-
----
-
-## Validation
-
-The controller includes built-in C++ validation that runs during `on_configure()`. It checks:
-
-- ✅ All required parameters present
-- ✅ Frames exist in robot model
-- ✅ Array sizes match joint count
-- ✅ Torque limits properly configured
-
-If validation fails, the controller will log clear error messages and refuse to configure.
-
----
-
-## Next Steps
-
-1. Test individual arm control with Cartesian controllers
-2. Test coordinated bimanual control
-3. Experiment with different control modes per arm
-4. Test nullspace posture control for each arm independently
-5. Try mixed control modes (e.g., left arm Cartesian, right arm joint space)
-
-For detailed control equations and implementation details, see:
-
-- `zordi_mit_controller/docs/CARTESIAN_CONTROL_EQUATIONS.md`
-- Main single-arm quick start: `CARTESIAN_QUICK_START.md`
-
----
-
-## Tips for Bimanual Control
-
-1. **Independent Control:** Each arm can use a different controller type
-2. **Synchronized Control:** Both arms can use the same controller type for coordinated tasks
-3. **Backdrivable Mode:** Use `grav_comp` controllers on both arms for manual teaching
-4. **Frame Coordination:** Consider using a common world frame for coordinated tasks
-5. **Collision Avoidance:** MuJoCo handles self-collision between arms automatically

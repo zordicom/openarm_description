@@ -471,20 +471,20 @@ right_zordi_cartesian_controller:
         y: 500.0
         z: 500.0
       rotation:
-        x: 50.0
-        y: 50.0
-        z: 50.0
+        x: 500.0
+        y: 500.0
+        z: 500.0
     damping:
       translation:
         x: 0.0
         y: 0.0
         z: 0.0
       rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
+        x: 10.0
+        y: 10.0
+        z: 10.0
     nullspace:
-      stiffness: 10.0
+      stiffness: 5.0
       damping: 0.0
       weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
       projector_type: "dynamic"
@@ -521,20 +521,20 @@ right_zordi_cartesian_rnea_controller:
         y: 500.0
         z: 500.0
       rotation:
-        x: 50.0
-        y: 50.0
-        z: 50.0
+        x: 500.0
+        y: 500.0
+        z: 500.0
     damping:
       translation:
         x: 0.0
         y: 0.0
         z: 0.0
       rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
+        x: 10.0
+        y: 10.0
+        z: 10.0
     nullspace:
-      stiffness: 20.0
+      stiffness: 0.0
       damping: 0.0
       weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
       projector_type: "dynamic"
