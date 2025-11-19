@@ -43,17 +43,19 @@
 
       <xacro:macro name="configure_joint" params="joint_name initial_position kp:=2000.0 kd:=100.0 ki:=10.0">
         <joint name="${joint_name}">
-          <!-- MuJoCo PID parameters (must be at joint level, not under command_interface)
-               Kp: Stiffness | Kd: Damping | Ki: Gravity compensation -->
-          <xacro:if value="${use_mujoco}">
-            <param name="position_kp">${kp}</param>
-            <param name="position_kd">${kd}</param>
-            <param name="position_ki">${ki}</param>
-            <!-- velocity_kp acts as damping gain (Kd) in MIT mode -->
-            <param name="velocity_kp">${kd}</param>
-            <param name="velocity_kd">0.0</param>
-            <param name="velocity_ki">0.0</param>
-          </xacro:if>
+          <!-- PID parameters for both MuJoCo and real hardware -->
+          <!-- These are used by: -->
+          <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+          <!--   - zordi_mit_controller software PD mode (compute_pd_internally=true) -->
+          <!--   - real hardware interfaces (DAMIAO, etc.) -->
+          <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
+          <param name="position_kp">${kp}</param>
+          <param name="position_kd">${kd}</param>
+          <param name="position_ki">${ki}</param>
+          <!-- velocity_kp acts as damping gain (Kd) in MIT mode -->
+          <param name="velocity_kp">${kd}</param>
+          <param name="velocity_kd">0.0</param>
+          <param name="velocity_ki">0.0</param>
 
           <!-- Command Interfaces -->
           <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -77,20 +79,21 @@
         </joint>
       </xacro:macro>
 
-      <!-- PID gains: Reduced for RNEA controller (feedforward-dominant control) -->
+      <!-- PID gains: Matched to working test systems for optimal feedforward-dominant control -->
       <!-- These gains are used by mujoco_system in MIT mode (when effort interface is claimed) -->
+      <!-- AND by real hardware interfaces (DAMIAO motors, etc.) -->
+      <!-- CRITICAL: Must match MuJoCo XML actuator gains for sim-to-real transfer! -->
       <!-- Initial positions: Canonical zero pose (all joints at 0.0 rad) -->
-      <!-- Strategy: Low hardware PD gains + high RNEA feedforward = smooth, accurate control -->
-      <!-- Hardware PD provides only small corrections; RNEA provides main control authority -->
-      <!-- Kp: 5-10x reduction from previous values (was 5000-8000, now 500-1000) -->
-      <!-- Kd: 5-10x reduction from previous values (was 220-300, now 30-50) -->
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint1" initial_position="0.0" kp="800.0" kd="40.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint2" initial_position="0.0" kp="1000.0" kd="50.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint3" initial_position="0.0" kp="800.0" kd="40.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint4" initial_position="0.0" kp="1000.0" kd="50.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint5" initial_position="0.0" kp="300.0" kd="15.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint6" initial_position="0.0" kp="200.0" kd="10.0" ki="0.0"/>
-      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint7" initial_position="0.0" kp="200.0" kd="10.0" ki="0.0"/>
+      <!-- Strategy: Low hardware PD gains (kp=100/50, kd=10/5) + gravity/RNEA feedforward -->
+      <!-- Matches working test systems: test_1dof_gravity.xml, test_2dof_gravity.xml -->
+      <!-- Lower gains prevent saturation and provide headroom for feedforward torques -->
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint1" initial_position="0.0" kp="100.0" kd="10.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint2" initial_position="0.0" kp="100.0" kd="10.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint3" initial_position="0.0" kp="100.0" kd="10.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint4" initial_position="0.0" kp="100.0" kd="10.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint5" initial_position="0.0" kp="50.0" kd="5.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint6" initial_position="0.0" kp="50.0" kd="5.0" ki="0.0"/>
+      <xacro:configure_joint joint_name="openarm_${arm_prefix}joint7" initial_position="0.0" kp="50.0" kd="5.0" ki="0.0"/>
 
       <xacro:if value="${hand}">
         <xacro:configure_joint joint_name="openarm_${arm_prefix}finger_joint1" initial_position="0.0" />

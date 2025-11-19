@@ -230,11 +230,11 @@
       <!-- No control_mode parameter - mode switches automatically based on active controller -->
     </hardware>
     <joint name="openarm_joint1">
-      <param name="position_kp">20.0</param>
-      <param name="position_kd">2.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.02</param>
-      <param name="velocity_kd">0.002</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -253,11 +253,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint2">
-      <param name="position_kp">20.0</param>
-      <param name="position_kd">2.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.02</param>
-      <param name="velocity_kd">0.002</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -276,11 +276,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint3">
-      <param name="position_kp">15.0</param>
-      <param name="position_kd">1.5</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.015</param>
-      <param name="velocity_kd">0.0015</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -299,11 +299,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint4">
-      <param name="position_kp">15.0</param>
-      <param name="position_kd">1.5</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.015</param>
-      <param name="velocity_kd">0.0015</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -322,11 +322,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint5">
-      <param name="position_kp">5.0</param>
-      <param name="position_kd">0.5</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.005</param>
-      <param name="velocity_kd">0.0005</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -345,11 +345,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint6">
-      <param name="position_kp">5.0</param>
-      <param name="position_kd">0.5</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.005</param>
-      <param name="velocity_kd">0.0005</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
@@ -368,11 +368,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint7">
-      <param name="position_kp">5.0</param>
-      <param name="position_kd">0.5</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">0.005</param>
-      <param name="velocity_kd">0.0005</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Command Interfaces -->
       <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->

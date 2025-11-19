@@ -124,10 +124,14 @@ ros2 topic pub /left_zordi_cartesian_controller/target_pose \
 
 ### Send Target Pose to Right Arm
 
-**Home Position** (joint4 = 1.57 rad):
+**Test Sequence: Home → Extended**
+
+This example shows the right arm moving from its home position to an extended configuration.
+
+**Step 1: Move to Home Position** (joint4 = 1.57 rad):
 
 ```bash
-ros2 topic pub /right_zordi_cartesian_controller/target_pose \
+ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
   geometry_msgs/msg/PoseStamped \
   "{
     header: {
@@ -150,10 +154,10 @@ ros2 topic pub /right_zordi_cartesian_controller/target_pose \
   }"
 ```
 
-**Extended Position** (joint4 = 1.0 rad, elbow extended ~12 cm):
+**Step 2: Wait for convergence, then move to Extended Position** (joint4 = 1.0 rad, elbow extends ~12 cm):
 
 ```bash
-ros2 topic pub /right_zordi_cartesian_controller/target_pose \
+ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
   geometry_msgs/msg/PoseStamped \
   "{
     header: {
@@ -175,6 +179,8 @@ ros2 topic pub /right_zordi_cartesian_controller/target_pose \
     }
   }"
 ```
+
+> **Note:** The `--once` flag sends a single message and exits. The controller will smoothly move to each target using internal trajectory generation.
 
 ### Coordinated Bimanual Control
 

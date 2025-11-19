@@ -252,3 +252,4 @@ Left Arm:                    Right Arm:
 - All new files follow the same patterns as the single-arm configuration
 - Controllers use the same parameters as single-arm, just duplicated per arm
 - The setup supports fully independent control of each arm
+

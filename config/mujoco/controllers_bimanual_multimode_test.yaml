@@ -184,6 +184,9 @@ left_zordi_grav_comp_controller:
     use_gravity_compensation: true
     compute_pd_internally: false
 
+    # Use left-arm-only robot description for independent gravity computation
+    robot_description_topic: "robot_description_left_arm"
+
 left_zordi_mit_rnea_controller:
   ros__parameters:
     joints:
@@ -414,6 +417,9 @@ right_zordi_grav_comp_controller:
     gravity_comp_only: true
     use_gravity_compensation: true
     compute_pd_internally: false
+
+    # Use right-arm-only robot description for independent gravity computation
+    robot_description_topic: "robot_description"
 
 right_zordi_mit_rnea_controller:
   ros__parameters:

@@ -182,3 +182,4 @@ The planar 2-DoF demo had the correct configuration all along - explicit torque 
 - **Testing Guide:** `docs/TESTING_GUIDE.md`
 - **Control Equations:** `zordi_mit_controller/docs/CARTESIAN_CONTROL_EQUATIONS.md`
 - **Validation Header:** `zordi_mit_controller/include/zordi_mit_controller/controller_validation.hpp`
+

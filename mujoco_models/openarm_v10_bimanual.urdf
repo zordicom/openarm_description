@@ -483,11 +483,11 @@
       <param name="control_mode">all</param>
     </hardware>
     <joint name="openarm_left_joint1">
-      <param name="position_kp">3000.0</param>
-      <param name="position_kd">150.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">300.0</param>
-      <param name="velocity_kd">15.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -504,11 +504,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint2">
-      <param name="position_kp">5000.0</param>
-      <param name="position_kd">200.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">500.0</param>
-      <param name="velocity_kd">20.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -525,11 +525,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint3">
-      <param name="position_kp">3000.0</param>
-      <param name="position_kd">150.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">300.0</param>
-      <param name="velocity_kd">15.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -546,11 +546,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint4">
-      <param name="position_kp">5000.0</param>
-      <param name="position_kd">200.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">500.0</param>
-      <param name="velocity_kd">20.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -567,11 +567,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint5">
-      <param name="position_kp">1000.0</param>
-      <param name="position_kd">50.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">100.0</param>
-      <param name="velocity_kd">5.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -588,11 +588,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint6">
-      <param name="position_kp">500.0</param>
-      <param name="position_kd">30.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">50.0</param>
-      <param name="velocity_kd">3.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -609,11 +609,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_left_joint7">
-      <param name="position_kp">500.0</param>
-      <param name="position_kd">30.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">50.0</param>
-      <param name="velocity_kd">3.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -639,11 +639,11 @@
       <param name="control_mode">all</param>
     </hardware>
     <joint name="openarm_right_joint1">
-      <param name="position_kp">3000.0</param>
-      <param name="position_kd">150.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">300.0</param>
-      <param name="velocity_kd">15.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -660,11 +660,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint2">
-      <param name="position_kp">5000.0</param>
-      <param name="position_kd">200.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">500.0</param>
-      <param name="velocity_kd">20.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -681,11 +681,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint3">
-      <param name="position_kp">3000.0</param>
-      <param name="position_kd">150.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">300.0</param>
-      <param name="velocity_kd">15.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -702,11 +702,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint4">
-      <param name="position_kp">5000.0</param>
-      <param name="position_kd">200.0</param>
+      <param name="position_kp">100.0</param>
+      <param name="position_kd">10.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">500.0</param>
-      <param name="velocity_kd">20.0</param>
+      <param name="velocity_kp">10.0</param>
+      <param name="velocity_kd">1.0</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -723,11 +723,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint5">
-      <param name="position_kp">1000.0</param>
-      <param name="position_kd">50.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">100.0</param>
-      <param name="velocity_kd">5.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -744,11 +744,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint6">
-      <param name="position_kp">500.0</param>
-      <param name="position_kd">30.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">50.0</param>
-      <param name="velocity_kd">3.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
@@ -765,11 +765,11 @@
       </state_interface>
     </joint>
     <joint name="openarm_right_joint7">
-      <param name="position_kp">500.0</param>
-      <param name="position_kd">30.0</param>
+      <param name="position_kp">50.0</param>
+      <param name="position_kd">5.0</param>
       <param name="position_ki">0.0</param>
-      <param name="velocity_kp">50.0</param>
-      <param name="velocity_kd">3.0</param>
+      <param name="velocity_kp">5.0</param>
+      <param name="velocity_kd">0.5</param>
       <param name="velocity_ki">0.0</param>
       <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
       <command_interface name="position_pid"/>
