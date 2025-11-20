@@ -32,10 +32,4 @@ endif()
 install(DIRECTORY launch meshes rviz urdf config mujoco_models
         DESTINATION share/${PROJECT_NAME})
 
-# Install Python scripts
-install(PROGRAMS
-        scripts/test_openarm_multimode_scenario_a.py
-        scripts/test_openarm_multimode_scenario_b.py
-        DESTINATION lib/${PROJECT_NAME})
-
 ament_package()

@@ -18,7 +18,7 @@ cd /home/gilwoo/ros2_ws
 source install/setup.bash
 
 # Launch right arm system (starts from "extended" keyframe by default)
-ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py
+ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py initial_keyframe:="extended"
 
 # In another terminal (after sourcing):
 ros2 control list_controllers
@@ -86,7 +86,7 @@ Send target poses directly to the controller. The controller smoothly interpolat
 **Example: Move to Home Position**
 
 ```bash
-ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
+ros2 topic pub --once /right_zordi_cartesian_rnea_controller/target_pose \
   geometry_msgs/msg/PoseStamped \
   "{
     header: {
@@ -100,6 +100,8 @@ ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
   }"
 ```
 
+This shuold get the joint states close to "<key name="home" qpos="0.0 0.785 0.0 1.57 0.0 0.0 0.0" />".
+
 ### Method 2: Action-Based Control (Trajectory with Timing)
 
 Use actions for precise timing and feedback. Recommended for smoother, more controlled motions.
@@ -107,7 +109,7 @@ Use actions for precise timing and feedback. Recommended for smoother, more cont
 **Example: Move to Home Position Over 3 Seconds**
 
 ```bash
-ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartesian_trajectory \
+ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
   zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
@@ -127,6 +129,7 @@ ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartes
 ```
 
 ### Keyframe Cartesian Poses (All in Base Frame: openarm_right_link0)
+
 Keyframes are defined in "openarm_v10_right_arm_proper.xml"
 
 #### **Home** (joint4 = 1.57 rad, elbow bent)
@@ -164,14 +167,14 @@ orientation: {x: 0.604925, y: 0.615794, z: 0.298166, w: 0.407383}
 ```bash
 ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py  initial_keyframe:="extended"
 # or ros2 service call /reset_to_keyframe   mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'extended'}"
-ros2 control set_controller_state right_zordi_cartesian_controller active
+ros2 control set_controller_state right_zordi_cartesian_rnea_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Step 2: Move to Home (from default "extended" startup)**
 
 ```bash
-ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartesian_trajectory \
+ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
   zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
@@ -193,19 +196,28 @@ ros2 action send_goal --feedback /right_zordi_cartesian_controller/follow_cartes
 **Step 3: Move Back to Extended**
 
 ```bash
-ros2 topic pub --once /right_zordi_cartesian_controller/target_pose \
-  geometry_msgs/msg/PoseStamped \
+ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
+  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
-    header: {
-      stamp: {sec: 0, nanosec: 0},
-      frame_id: 'openarm_right_link0'
-    },
-    pose: {
-      position: {x: 0.181758, y: -0.238181, z: 0.360492},
-      orientation: {x: 0.335998, y: 0.442895, z: 0.183556, w: 0.810714}
+    trajectory: {
+      points: [
+        {
+          point: {
+            pose: {
+              position: {x: 0.181758, y: -0.238181, z: 0.360492},
+              orientation: {x: 0.335998, y: 0.442895, z: 0.183556, w: 0.810714}
+            }
+          },
+          time_from_start: {sec: 3, nanosec: 0}
+        }
+      ]
     }
   }"
 ```
-This would result in more jerkey motion than the trajectory version above. Check the joint states to confirm that it's roughly at the extended pose.
 
----
+Check the joint states to confirm that it's roughly at the extended pose.
+The extended pose is defined as:
+
+```xml
+    <key name="extended" qpos="0.0 0.785 0.0 1.0 0.0 0.0 0.0" />
+```

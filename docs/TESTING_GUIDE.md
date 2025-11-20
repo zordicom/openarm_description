@@ -18,10 +18,10 @@ Quick-start guide for testing the OpenARM 7-DOF robot with gravity compensation 
 
 ### Key Features
 
-✅ **Multi-Mode Control** (`mujoco_ros2_control`) - Switch between position, velocity, torque, or combined control  
-✅ **Gravity Compensation** (`zordi_mit_controller`) - Hold any pose with <0.01 rad drift via Pinocchio dynamics  
-✅ **MIT Mode** (`mujoco_ros2_control`) - Full state control: `τ = Kp·(q_cmd - q) + Kd·(qd_cmd - qd) + τ_gravity`  
-✅ **MuJoCo Simulation** (`mujoco_ros2_control`) - Physics-accurate testing at 1000 Hz  
+✅ **Multi-Mode Control** (`mujoco_ros2_control`) - Switch between position, velocity, torque, or combined control
+✅ **Gravity Compensation** (`zordi_mit_controller`) - Hold any pose with <0.01 rad drift via Pinocchio dynamics
+✅ **MIT Mode** (`mujoco_ros2_control`) - Full state control: `τ = Kp·(q_cmd - q) + Kd·(qd_cmd - qd) + τ_gravity`
+✅ **MuJoCo Simulation** (`mujoco_ros2_control`) - Physics-accurate testing at 1000 Hz
 ✅ **Controller Switching** (ROS2 Control Framework) - Seamlessly switch modes during operation
 
 ### Available Controllers
@@ -46,21 +46,10 @@ pip install mujoco urdf2mjcf
 
 # Build workspace
 cd ~/ros2_ws
-colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_mit_controller openarm_description mujoco_ros2_control_msgs --symlink-install 
+colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_mit_controller openarm_description mujoco_ros2_control_msgs --symlink-install
 source install/setup.bash
 ```
 
-### Verify Installation
-
-```bash
-# Check controller plugin
-ros2 pkg list | grep zordi_mit_controller
-
-# Check Pinocchio
-python3 -c "import pinocchio; print('Pinocchio OK')"
-
-# Check launch file
-ros2 launch openarm_description --show-args test_openarm_multimode.launch.py
 ```
 
 ---
@@ -79,6 +68,7 @@ ros2 launch openarm_description test_openarm_multimode.launch.py
 **Expected:** MuJoCo viewer opens, robot at home position (all zeros)
 
 **Activate and test:**
+
 ```bash
 # Terminal 2
 ros2 control set_controller_state joint_trajectory_controller active
@@ -87,25 +77,19 @@ ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationCon
 # Send trajectory
 ros2 topic pub --once /joint_trajectory_controller/joint_trajectory \
   trajectory_msgs/msg/JointTrajectory "{
-    joint_names: [openarm_joint1, openarm_joint2, openarm_joint3, 
+    joint_names: [openarm_joint1, openarm_joint2, openarm_joint3,
                   openarm_joint4, openarm_joint5, openarm_joint6, openarm_joint7],
     points: [{
-      positions: [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      positions: [0.5, 0.0, 0.0, 0.3, 0.5, 0.0, 0.0],
       time_from_start: {sec: 2}
     }]
   }"
 ```
 
-**Expected Result:**
-- ✅ Smooth motion to joint1 = 0.5 rad over 2 seconds
-- ✅ No oscillation
-- ✅ Holds position (may have slight gravity sag)
-
----
-
 ### Test 2: Gravity Compensation with MIT Mode
 
 **Launch at test pose:**
+
 ```bash
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
 ```
@@ -113,18 +97,19 @@ ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyfram
 **Expected:** Robot starts at pose1 `[1.0, 1.5, -1.0, 2.0, 1.0, -1.5, 1.5]`
 
 **Activate hardware PD:**
+
 ```bash
 # Terminal 2
-ros2 control set_controller_state zordi_hardware_pd_controller active
+ros2 control set_controller_state zordi_grav_comp_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Expected Result:**
-- ✅ Slight initial oscillation (~0.5s) - **normal for discrete-time control**
-- ✅ Robot settles and holds pose1 stably
-- ✅ No drift (gravity compensated)
+
+- Joint 6 rotates to -0.72; we may need to tune the gravity compensation gains.
 
 **Monitor:**
+
 ```bash
 # Check joint states
 ros2 topic echo /joint_states --once
@@ -138,15 +123,16 @@ ros2 topic echo /joint_states --once
 ### Test 3: Trajectory Tracking with Software PD Controller
 
 **Activate software PD:**
+
 ```bash
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'pause'}"
-ros2 control set_controller_state joint_trajectory_controller inactive
 ros2 control set_controller_state zordi_hardware_pd_controller inactive
 ros2 control set_controller_state zordi_software_pd_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Send trajectory via action:**
+
 ```bash
 ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
   control_msgs/action/FollowJointTrajectory "{
@@ -164,11 +150,13 @@ ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
 ```
 
 **Expected Result:**
+
 - ✅ Smooth trajectory execution with gravity compensation
 - ✅ Progress feedback shown in terminal
 - ✅ Automatic hold after completion (no drift)
 
 **Multi-point trajectory:**
+
 ```bash
 ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
   control_msgs/action/FollowJointTrajectory "{
@@ -184,26 +172,6 @@ ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
     }
   }" --feedback
 ```
-
----
-
-### Test 4: Pure Gravity Compensation (Backdrivable)
-
-**Activate gravity comp:**
-```bash
-ros2 control set_controller_state zordi_software_pd_controller inactive
-ros2 control set_controller_state zordi_grav_comp_controller active
-```
-
-**Expected Result:**
-- ✅ Robot stays roughly at current pose
-- ✅ Slow drift is **normal** (no position control, only gravity comp)
-- ✅ Fully backdrivable (no PD stiffness)
-
-**Key Point:** This mode only applies `τ = gravity_torques`, no position control. Drift is expected from:
-- Numerical integration errors
-- Low joint damping (0.01 Nm/(rad/s))
-- Small modeling errors
 
 ---
 
@@ -304,14 +272,15 @@ ros2 topic echo /joint_states | grep -A 7 "effort:"
 Edit `urdf/ros2_control/openarm.ros2_control.xacro`:
 
 ```xml
-<xacro:configure_joint joint_name="openarm_${arm_prefix}joint1" 
-                      initial_position="0.0" 
+<xacro:configure_joint joint_name="openarm_${arm_prefix}joint1"
+                      initial_position="0.0"
                       kp="150.0"   <!-- Increase from 100.0 -->
                       kd="12.0"    <!-- Increase from 10.0 -->
                       ki="0.0"/>
 ```
 
 Then regenerate and rebuild:
+
 ```bash
 cd ~/ros2_ws/src/openarm_description
 python3 scripts/urdf_to_mjcf.py --output mujoco_models/openarm_v10.xml
@@ -341,6 +310,7 @@ poses:
 ```
 
 Then regenerate:
+
 ```bash
 cd ~/ros2_ws/src/openarm_description
 python3 scripts/urdf_to_mjcf.py --output mujoco_models/openarm_v10.xml
@@ -354,11 +324,13 @@ colcon build --packages-select openarm_description --symlink-install
 ### Robot Falls/Drops
 
 **Possible causes:**
+
 1. Gravity compensation not working (Pinocchio failed to load)
 2. Effort limits too low
 3. Wrong controller active
 
 **Check:**
+
 ```bash
 # Look for Pinocchio initialization in logs
 # Should see: "Pinocchio model loaded: 7 DOF, 8 joints"
@@ -376,6 +348,7 @@ python3 -c "import pinocchio; print('OK')"
 **Cause:** Using old version without joint ordering fix
 
 **Fix:**
+
 ```bash
 cd ~/ros2_ws
 colcon build --packages-select zordi_mit_controller --cmake-args -DCMAKE_BUILD_TYPE=Release
@@ -388,6 +361,7 @@ ros2 control set_controller_state joint_trajectory_controller active
 ### MuJoCo Viewer Doesn't Render
 
 **Fix:**
+
 ```bash
 # Test if XML loads
 cd ~/ros2_ws/src/openarm_description
@@ -406,6 +380,7 @@ colcon build --packages-select openarm_description --symlink-install
 **Cause:** Keyframe definitions missing or wrong DOF count
 
 **Fix:** Regenerate XML from `initial_poses.yaml`:
+
 ```bash
 cd ~/ros2_ws/src/openarm_description
 python3 scripts/urdf_to_mjcf.py --output mujoco_models/openarm_v10.xml
@@ -417,6 +392,7 @@ The script automatically reads keyframes from `config/mujoco/initial_poses.yaml`
 ### Clean Slate Reset
 
 If things get messy:
+
 ```bash
 cd ~/ros2_ws
 rm -rf build/ install/ log/
@@ -455,21 +431,25 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 ## Summary: What to Expect
 
 ✅ **joint_trajectory_controller:**
+
 - Zero oscillation, smooth tracking
 - Slight gravity sag (no gravity comp)
 - Standard ROS2 trajectory execution
 
 ✅ **zordi_hardware_pd_controller / zordi_software_pd_controller:**
+
 - ~0.5s settling with slight overshoot (**normal for discrete-time PD!**)
 - Stable hold with gravity compensation
 - Zero gravity sag
 
 ✅ **zordi_grav_comp_controller:**
+
 - Slow drift (expected - no position control!)
 - Fully backdrivable
 - Gravity compensated
 
 ❌ **Problem indicators:**
+
 - **Wild oscillation** → Joint ordering fix not applied, rebuild controller
 - **Immediate drop** → Pinocchio not loaded or effort limits too low
 - **Won't activate** → Check YAML configuration
@@ -479,18 +459,21 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 ## Next Steps
 
 ### For New Users
+
 1. Run Quick Start tests above
 2. Try different keyframes
 3. Practice controller switching
 4. Monitor joint states and effort commands
 
 ### For Developers
+
 1. **Technical details:** See `KEY_FIXES_SUMMARY.md`
 2. **Tune PID gains:** Modify URDF, regenerate XML
 3. **Add keyframes:** Edit `initial_poses.yaml`, regenerate
 4. **Custom controllers:** Use `zordi_mit_controller` as template
 
 ### For Real Hardware
+
 1. Same controllers work with `OpenArm_v10HW` plugin
 2. Tune gains for your payload
 3. Test gravity compensation accuracy
@@ -501,15 +484,17 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 ## Related Documentation
 
 ### This Package (`openarm_description`)
+
 - **Technical fixes:** [KEY_FIXES_SUMMARY.md](KEY_FIXES_SUMMARY.md) - Critical bug fixes and solutions
 
 ### Other Packages
+
 - **MuJoCo ROS2 Control:** `mujoco_ros2_control/doc/mujoco_ros2_control_updates.md` - MIT mode architecture
 - **MuJoCo Demos:** `mujoco_ros2_control_demos/README.md` - Examples and tutorials
 - **Zordi MIT Controller:** `zordi_mit_controller/README.md` - Controller API and configuration
 
 ---
 
-**Document Version:** 3.0  
-**Last Updated:** November 17, 2025  
+**Document Version:** 3.0
+**Last Updated:** November 17, 2025
 **Status:** ✅ Production Ready
