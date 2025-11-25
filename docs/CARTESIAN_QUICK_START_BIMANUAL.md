@@ -110,7 +110,7 @@ Use actions for precise timing and feedback. Recommended for smoother, more cont
 
 ```bash
 ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
-  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
+  zordi_ros_controllers_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
       points: [
@@ -175,7 +175,7 @@ ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationCon
 
 ```bash
 ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
-  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
+  zordi_ros_controllers_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
       points: [
@@ -197,7 +197,7 @@ ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/foll
 
 ```bash
 ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
-  zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
+  zordi_ros_controllers_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
       points: [

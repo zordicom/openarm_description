@@ -14,12 +14,12 @@ Quick-start guide for testing the OpenARM 7-DOF robot with gravity compensation 
 |---------|---------|----------|
 | **`openarm_description`** | Robot models and launch files | URDF/MJCF models, keyframes, launch files, configs |
 | **`mujoco_ros2_control`** | MuJoCo hardware interface | Actuator-centric control, MIT mode implementation |
-| **`zordi_mit_controller`** | MIT controller with gravity comp | Trajectory tracking, gravity compensation via Pinocchio |
+| **`zordi_ros_controllers`** | MIT controller with gravity comp | Trajectory tracking, gravity compensation via Pinocchio |
 
 ### Key Features
 
 ✅ **Multi-Mode Control** (`mujoco_ros2_control`) - Switch between position, velocity, torque, or combined control
-✅ **Gravity Compensation** (`zordi_mit_controller`) - Hold any pose with <0.01 rad drift via Pinocchio dynamics
+✅ **Gravity Compensation** (`zordi_ros_controllers`) - Hold any pose with <0.01 rad drift via Pinocchio dynamics
 ✅ **MIT Mode** (`mujoco_ros2_control`) - Full state control: `τ = Kp·(q_cmd - q) + Kd·(qd_cmd - qd) + τ_gravity`
 ✅ **MuJoCo Simulation** (`mujoco_ros2_control`) - Physics-accurate testing at 1000 Hz
 ✅ **Controller Switching** (ROS2 Control Framework) - Seamlessly switch modes during operation
@@ -29,9 +29,9 @@ Quick-start guide for testing the OpenARM 7-DOF robot with gravity compensation 
 | Controller | Package | Interfaces | Behavior | Use Case |
 |-----------|---------|-----------|----------|----------|
 | **joint_trajectory_controller** | ros2_controllers (ROS2 standard) | pos + vel | Zero oscillation, no gravity comp | Standard trajectory execution |
-| **zordi_hardware_pd_controller** | zordi_mit_controller | pos + vel + eff | MIT mode in hardware, ~0.5s settling | Hardware-like simulation with gravity comp |
-| **zordi_software_pd_controller** | zordi_mit_controller | pos + vel + eff | Same as HW PD (SW PD not yet implemented) | Future: internal PD computation |
-| **zordi_grav_comp_controller** | zordi_mit_controller | eff only | Backdrivable, slow drift | Pure gravity compensation testing |
+| **zordi_hardware_pd_controller** | zordi_ros_controllers | pos + vel + eff | MIT mode in hardware, ~0.5s settling | Hardware-like simulation with gravity comp |
+| **zordi_software_pd_controller** | zordi_ros_controllers | pos + vel + eff | Same as HW PD (SW PD not yet implemented) | Future: internal PD computation |
+| **zordi_grav_comp_controller** | zordi_ros_controllers | eff only | Backdrivable, slow drift | Pure gravity compensation testing |
 
 ---
 
@@ -46,7 +46,7 @@ pip install mujoco urdf2mjcf
 
 # Build workspace
 cd ~/ros2_ws
-colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_mit_controller openarm_description mujoco_ros2_control_msgs --symlink-install
+colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_ros_controllers openarm_description mujoco_ros2_control_msgs --symlink-install
 source install/setup.bash
 ```
 
@@ -351,7 +351,7 @@ python3 -c "import pinocchio; print('OK')"
 
 ```bash
 cd ~/ros2_ws
-colcon build --packages-select zordi_mit_controller --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --packages-select zordi_ros_controllers --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 
 # Test with joint_trajectory_controller (should be stable)
@@ -396,7 +396,7 @@ If things get messy:
 ```bash
 cd ~/ros2_ws
 rm -rf build/ install/ log/
-colcon build --packages-select openarm_description zordi_mit_controller --symlink-install
+colcon build --packages-select openarm_description zordi_ros_controllers --symlink-install
 source install/setup.bash
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=home
 ```
@@ -470,7 +470,7 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 1. **Technical details:** See `KEY_FIXES_SUMMARY.md`
 2. **Tune PID gains:** Modify URDF, regenerate XML
 3. **Add keyframes:** Edit `initial_poses.yaml`, regenerate
-4. **Custom controllers:** Use `zordi_mit_controller` as template
+4. **Custom controllers:** Use `zordi_ros_controllers` as template
 
 ### For Real Hardware
 
@@ -491,7 +491,7 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 
 - **MuJoCo ROS2 Control:** `mujoco_ros2_control/doc/mujoco_ros2_control_updates.md` - MIT mode architecture
 - **MuJoCo Demos:** `mujoco_ros2_control_demos/README.md` - Examples and tutorials
-- **Zordi MIT Controller:** `zordi_mit_controller/README.md` - Controller API and configuration
+- **Zordi MIT Controller:** `zordi_ros_controllers/README.md` - Controller API and configuration
 
 ---
 

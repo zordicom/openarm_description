@@ -22,7 +22,7 @@ Usage Examples:
 
     # Start with full MIT controller (gravity-comp trajectories)
     ros2 launch openarm_description single_arm.launch.py \
-        default_controller:=zordi_mit_controller
+        default_controller:=zordi_ros_controllers
 
     # Start at pose1 keyframe
     ros2 launch openarm_description single_arm.launch.py \
@@ -143,13 +143,13 @@ def generate_launch_description():
             choices=[
                 "joint_trajectory_controller",
                 "effort_controller",
-                "zordi_mit_controller",
+                "zordi_ros_controllers",
             ],
             description=(
                 "Which controller to activate at startup: "
                 "joint_trajectory_controller (stiff position_servo), "
                 "effort_controller (pure torque mit mode), "
-                "zordi_mit_controller (full MIT with pos+vel+eff)"
+                "zordi_ros_controllers (full MIT with pos+vel+eff)"
             ),
         )
     )
@@ -241,7 +241,7 @@ def generate_launch_description():
         print("  Controllers loaded:")
         print("    - joint_trajectory_controller (ACTIVE - position_servo mode)")
         print("    - effort_controller (inactive - mit mode, torque only)")
-        print("    - zordi_mit_controller (inactive - mit mode, full control)")
+        print("    - zordi_ros_controllers (inactive - mit mode, full control)")
         print("  Note: CartesianController also provides full MIT mode")
         print("  Controller config: controllers_all.yaml")
         print(f"{'=' * 60}\n")
@@ -309,7 +309,7 @@ def generate_launch_description():
         controllers = [
             "joint_trajectory_controller",
             "effort_controller",
-            "zordi_mit_controller",
+            "zordi_ros_controllers",
         ]
 
         spawners = [

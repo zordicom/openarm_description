@@ -46,7 +46,7 @@
           <!-- PID parameters for both MuJoCo and real hardware -->
           <!-- These are used by: -->
           <!--   - mujoco_system.cpp (when use_mujoco=true) -->
-          <!--   - zordi_mit_controller software PD mode (compute_pd_internally=true) -->
+          <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
           <!--   - real hardware interfaces (DAMIAO, etc.) -->
           <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
           <param name="position_kp">${kp}</param>

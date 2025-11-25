@@ -22,35 +22,35 @@ controller_manager:
 
     # MIT mode - Uses hardware PD (MuJoCo or DAMIAO)
     zordi_joint_mit_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     # Effort-only mode - Computes PD internally
     zordi_joint_effort_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     # Pure gravity compensation - Backdrivable operation
     zordi_joint_effort_grav_comp_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     # RNEA controller (MIT mode) - Full inverse dynamics with cubic splines
     zordi_joint_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     # RNEA controller (Effort-only mode) - Full inverse dynamics, effort interface only
     zordi_joint_effort_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     # Cartesian impedance controller (basic)
     zordi_cartesian_mit_controller:
-      type: zordi_mit_controller/ZordiCartesianController
+      type: zordi_ros_controllers/ZordiCartesianController
 
     # Cartesian controller with RNEA (advanced)
     zordi_cartesian_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiCartesianRNEAController
+      type: zordi_ros_controllers/ZordiCartesianRNEAController
 
     # Cartesian IK controller (outputs to JTC)
     zordi_cartesian_ik_controller:
-      type: zordi_mit_controller/ZordiCartesianIKController
+      type: zordi_ros_controllers/ZordiCartesianIKController
 
 # Joint state broadcaster configuration
 joint_state_broadcaster:

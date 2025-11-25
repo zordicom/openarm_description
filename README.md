@@ -11,7 +11,7 @@ ROS2 package for the OpenARM 7-DOF robot arm with MuJoCo simulation support, gra
 ```bash
 # Build
 cd ~/ros2_ws
-colcon build --packages-select openarm_description zordi_mit_controller --symlink-install
+colcon build --packages-select openarm_description zordi_ros_controllers --symlink-install
 source install/setup.bash
 
 # Launch simulation
@@ -57,7 +57,7 @@ ros2 action send_goal /zordi_hardware_pd_controller/follow_joint_trajectory \
 For detailed architecture and implementation:
 - **MuJoCo ROS2 Control:** [mujoco_ros2_control/doc/mujoco_ros2_control_updates.md](../../mujoco_ros2_control/doc/mujoco_ros2_control_updates.md)
 - **Demos and Examples:** [mujoco_ros2_control_demos/README.md](../../mujoco_ros2_control/mujoco_ros2_control_demos/README.md)
-- **zordi_mit_controller:** [zordi_mit_controller/README.md](../../zordi_mit_controller/README.md)
+- **zordi_ros_controllers:** [zordi_ros_controllers/README.md](../../zordi_ros_controllers/README.md)
 
 ---
 

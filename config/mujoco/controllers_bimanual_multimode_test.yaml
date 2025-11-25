@@ -18,50 +18,50 @@ controller_manager:
       type: joint_trajectory_controller/JointTrajectoryController
 
     left_zordi_joint_mit_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     left_zordi_joint_effort_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     left_zordi_joint_effort_grav_comp_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     left_zordi_joint_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     left_zordi_joint_effort_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     left_zordi_cartesian_mit_controller:
-      type: zordi_mit_controller/ZordiCartesianController
+      type: zordi_ros_controllers/ZordiCartesianController
 
     left_zordi_cartesian_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiCartesianRNEAController
+      type: zordi_ros_controllers/ZordiCartesianRNEAController
 
     # Right arm controllers
     right_joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
     right_zordi_joint_mit_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     right_zordi_joint_effort_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     right_zordi_joint_effort_grav_comp_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     right_zordi_joint_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     right_zordi_joint_effort_rnea_controller:
-      type: zordi_mit_controller/ZordiJointRNEAController
+      type: zordi_ros_controllers/ZordiJointRNEAController
 
     right_zordi_cartesian_mit_controller:
-      type: zordi_mit_controller/ZordiCartesianController
+      type: zordi_ros_controllers/ZordiCartesianController
 
     right_zordi_cartesian_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiCartesianRNEAController
+      type: zordi_ros_controllers/ZordiCartesianRNEAController
 
 # Joint state broadcaster configuration
 joint_state_broadcaster:

@@ -20,7 +20,7 @@ controller_manager:
       type: effort_controllers/JointGroupEffortController
 
     zordi_joint_mit_controller:
-      type: zordi_mit_controller/ZordiJointController
+      type: zordi_ros_controllers/ZordiJointController
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
