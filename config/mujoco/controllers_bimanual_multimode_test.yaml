@@ -32,10 +32,10 @@ controller_manager:
     left_zordi_joint_effort_rnea_controller:
       type: zordi_mit_controller/ZordiJointRNEAController
 
-    left_zordi_cartesian_controller:
+    left_zordi_cartesian_mit_controller:
       type: zordi_mit_controller/ZordiCartesianController
 
-    left_zordi_cartesian_rnea_controller:
+    left_zordi_cartesian_mit_rnea_controller:
       type: zordi_mit_controller/ZordiCartesianRNEAController
 
     # Right arm controllers
@@ -57,10 +57,10 @@ controller_manager:
     right_zordi_joint_effort_rnea_controller:
       type: zordi_mit_controller/ZordiJointRNEAController
 
-    right_zordi_cartesian_controller:
+    right_zordi_cartesian_mit_controller:
       type: zordi_mit_controller/ZordiCartesianController
 
-    right_zordi_cartesian_rnea_controller:
+    right_zordi_cartesian_mit_rnea_controller:
       type: zordi_mit_controller/ZordiCartesianRNEAController
 
 # Joint state broadcaster configuration
@@ -237,7 +237,7 @@ left_zordi_joint_effort_rnea_controller:
     use_gravity_compensation: true
     compute_pd_internally: true
 
-left_zordi_cartesian_controller:
+left_zordi_cartesian_mit_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -287,7 +287,7 @@ left_zordi_cartesian_controller:
     max_cartesian_velocity: 0.5
     max_cartesian_acceleration: 2.0
 
-left_zordi_cartesian_rnea_controller:
+left_zordi_cartesian_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -491,7 +491,7 @@ right_zordi_joint_effort_rnea_controller:
     use_gravity_compensation: true
     compute_pd_internally: true
 
-right_zordi_cartesian_controller:
+right_zordi_cartesian_mit_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1
@@ -541,7 +541,7 @@ right_zordi_cartesian_controller:
     max_cartesian_velocity: 0.5
     max_cartesian_acceleration: 2.0
 
-right_zordi_cartesian_rnea_controller:
+right_zordi_cartesian_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1

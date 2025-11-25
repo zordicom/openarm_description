@@ -11,8 +11,8 @@ This launch file:
    - right_zordi_software_pd_controller
    - right_zordi_grav_comp_controller
    - right_zordi_mit_rnea_controller
-   - right_zordi_cartesian_controller
-   - right_zordi_cartesian_rnea_controller
+   - right_zordi_cartesian_mit_controller
+   - right_zordi_cartesian_mit_rnea_controller
 
 3. Enables MuJoCo viewer for visualization
 4. Starts at specified initial keyframe (default: home)
@@ -30,7 +30,7 @@ Usage:
     ros2 control list_controllers
 
     # Activate controller
-    ros2 control set_controller_state right_zordi_cartesian_controller active
+    ros2 control set_controller_state right_zordi_cartesian_mit_controller active
 
 Available Controllers:
     - right_joint_trajectory_controller: Standard ROS2 (pos+vel)
@@ -38,8 +38,8 @@ Available Controllers:
     - right_zordi_software_pd_controller: Software PD (effort only)
     - right_zordi_grav_comp_controller: Gravity comp only (backdrivable)
     - right_zordi_mit_rnea_controller: Full inverse dynamics
-    - right_zordi_cartesian_controller: Cartesian impedance with nullspace
-    - right_zordi_cartesian_rnea_controller: Advanced Cartesian with RNEA
+    - right_zordi_cartesian_mit_controller: Cartesian impedance with nullspace
+    - right_zordi_cartesian_mit_rnea_controller: Advanced Cartesian with RNEA
 """
 
 from pathlib import Path
@@ -198,7 +198,7 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_cartesian_controller",
+            "right_zordi_cartesian_mit_controller",
         ],
         output="screen",
     )
@@ -210,7 +210,7 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_cartesian_rnea_controller",
+            "right_zordi_cartesian_mit_rnea_controller",
         ],
         output="screen",
     )

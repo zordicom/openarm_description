@@ -11,8 +11,8 @@ This launch file:
    - zordi_software_pd_controller (Software PD mode, effort only)
    - zordi_grav_comp_controller (Pure gravity compensation, backdrivable)
    - zordi_mit_rnea_controller (Full inverse dynamics with cubic splines)
-   - zordi_cartesian_controller (Cartesian impedance control with nullspace)
-   - zordi_cartesian_rnea_controller (Advanced Cartesian with RNEA)
+   - zordi_cartesian_mit_controller (Cartesian impedance control with nullspace)
+   - zordi_cartesian_mit_rnea_controller (Advanced Cartesian with RNEA)
 3. Enables MuJoCo viewer for visualization
 4. Starts at specified initial keyframe (default: home)
 5. Simulation starts PAUSED (unpause via service)
@@ -32,7 +32,7 @@ Usage:
     ros2 control set_controller_state zordi_software_pd_controller active
 
     # Activate a controller (Cartesian space)
-    ros2 control set_controller_state zordi_cartesian_controller active
+    ros2 control set_controller_state zordi_cartesian_mit_controller active
 
 Available Controllers:
     Joint Space:
@@ -43,12 +43,12 @@ Available Controllers:
     - zordi_mit_rnea_controller: Full inverse dynamics with cubic splines
 
     Cartesian Space (7-DOF features):
-    - zordi_cartesian_controller: Cartesian impedance with nullspace control
-    - zordi_cartesian_rnea_controller: Advanced Cartesian with full RNEA
+    - zordi_cartesian_mit_controller: Cartesian impedance with nullspace control
+    - zordi_cartesian_mit_rnea_controller: Advanced Cartesian with full RNEA
 """
 # NOTE: Controllers are loaded via CLI loader (ros2 control load_controller)
 # to avoid early parameter visibility issues with generate-parameter-library
-# controllers (e.g., zordi_cartesian_controller) when using the spawner node.
+# controllers (e.g., zordi_cartesian_mit_controller) when using the spawner node.
 
 from pathlib import Path
 
@@ -185,7 +185,7 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Load zordi_cartesian_controller (inactive) via CLI loader pattern
+    # Load zordi_cartesian_mit_controller (inactive) via CLI loader pattern
     load_cartesian = ExecuteProcess(
         cmd=[
             "ros2",
@@ -193,12 +193,12 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "zordi_cartesian_controller",
+            "zordi_cartesian_mit_controller",
         ],
         output="screen",
     )
 
-    # Load zordi_cartesian_rnea_controller (inactive) via CLI loader pattern
+    # Load zordi_cartesian_mit_rnea_controller (inactive) via CLI loader pattern
     load_cartesian_rnea = ExecuteProcess(
         cmd=[
             "ros2",
@@ -206,7 +206,7 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "zordi_cartesian_rnea_controller",
+            "zordi_cartesian_mit_rnea_controller",
         ],
         output="screen",
     )

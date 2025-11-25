@@ -24,7 +24,7 @@ ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py initia
 ros2 control list_controllers
 
 # Activate right arm Cartesian controller
-ros2 control set_controller_state right_zordi_cartesian_controller active
+ros2 control set_controller_state right_zordi_cartesian_mit_controller active
 ```
 
 ---
@@ -44,7 +44,7 @@ torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
 These parameters are set in `controllers_bimanual_multimode_test.yaml` for each Cartesian controller:
 
 ```yaml
-# For right_zordi_cartesian_controller (lines 466-467):
+# For right_zordi_cartesian_mit_controller (lines 466-467):
 end_effector_frame: "openarm_right_link7"
 base_frame: "openarm_right_link0"
 
@@ -62,8 +62,8 @@ base_frame: "openarm_right_link0"
 3. **right_zordi_hardware_pd_controller** - Hardware PD (MIT mode)
 4. **right_zordi_software_pd_controller** - Software PD (effort control)
 5. **right_zordi_mit_rnea_controller** - Joint trajectory tracking with RNEA feedforward (MIT mode)
-6. **right_zordi_cartesian_controller** - Cartesian impedance with nullspace control (MIT mode)
-7. **right_zordi_cartesian_rnea_controller** - Cartesian impedance with RNEA feedforward (MIT mode)
+6. **right_zordi_cartesian_mit_controller** - Cartesian impedance with nullspace control (MIT mode)
+7. **right_zordi_cartesian_mit_rnea_controller** - Cartesian impedance with RNEA feedforward (MIT mode)
 
 ### MIT Mode Explanation
 
@@ -86,7 +86,7 @@ Send target poses directly to the controller. The controller smoothly interpolat
 **Example: Move to Home Position**
 
 ```bash
-ros2 topic pub --once /right_zordi_cartesian_rnea_controller/target_pose \
+ros2 topic pub --once /right_zordi_cartesian_mit_rnea_controller/target_pose \
   geometry_msgs/msg/PoseStamped \
   "{
     header: {
@@ -109,7 +109,7 @@ Use actions for precise timing and feedback. Recommended for smoother, more cont
 **Example: Move to Home Position Over 3 Seconds**
 
 ```bash
-ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
+ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
   zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
@@ -167,14 +167,14 @@ orientation: {x: 0.604925, y: 0.615794, z: 0.298166, w: 0.407383}
 ```bash
 ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py  initial_keyframe:="extended"
 # or ros2 service call /reset_to_keyframe   mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'extended'}"
-ros2 control set_controller_state right_zordi_cartesian_rnea_controller active
+ros2 control set_controller_state right_zordi_cartesian_mit_rnea_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Step 2: Move to Home (from default "extended" startup)**
 
 ```bash
-ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
+ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
   zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {
@@ -196,7 +196,7 @@ ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_c
 **Step 3: Move Back to Extended**
 
 ```bash
-ros2 action send_goal --feedback /right_zordi_cartesian_rnea_controller/follow_cartesian_trajectory \
+ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
   zordi_mit_controller_msgs/action/FollowCartesianTrajectory \
   "{
     trajectory: {

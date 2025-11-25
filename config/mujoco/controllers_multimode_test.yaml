@@ -41,11 +41,11 @@ controller_manager:
       type: zordi_mit_controller/ZordiJointRNEAController
 
     # Cartesian impedance controller (basic)
-    zordi_cartesian_controller:
+    zordi_cartesian_mit_controller:
       type: zordi_mit_controller/ZordiCartesianController
 
     # Cartesian controller with RNEA (advanced)
-    zordi_cartesian_rnea_controller:
+    zordi_cartesian_mit_rnea_controller:
       type: zordi_mit_controller/ZordiCartesianRNEAController
 
     # Cartesian IK controller (outputs to JTC)
@@ -264,7 +264,7 @@ zordi_joint_effort_rnea_controller:
     compute_pd_internally: true
 
 # Zordi Cartesian Controller
-zordi_cartesian_controller:
+zordi_cartesian_mit_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -315,7 +315,7 @@ zordi_cartesian_controller:
     max_cartesian_acceleration: 2.0
 
 # Zordi Cartesian RNEA Controller
-zordi_cartesian_rnea_controller:
+zordi_cartesian_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -431,12 +431,12 @@ zordi_cartesian_ik_controller:
 #    # Best tracking performance with acceleration feedforward
 #
 # 6. Cartesian Controller (Cartesian Impedance):
-#    ros2 control set_controller_state zordi_cartesian_controller active
-#    ros2 topic pub --once /zordi_cartesian_controller/target_pose ...
+#    ros2 control set_controller_state zordi_cartesian_mit_controller active
+#    ros2 topic pub --once /zordi_cartesian_mit_controller/target_pose ...
 #
 # 7. Cartesian RNEA Controller (Advanced Cartesian):
-#    ros2 control set_controller_state zordi_cartesian_rnea_controller active
-#    ros2 topic pub --once /zordi_cartesian_rnea_controller/target_pose ...
+#    ros2 control set_controller_state zordi_cartesian_mit_rnea_controller active
+#    ros2 topic pub --once /zordi_cartesian_mit_rnea_controller/target_pose ...
 #
 # 8. Cartesian IK Controller (IK to JTC):
 #    # First activate joint_trajectory_controller
