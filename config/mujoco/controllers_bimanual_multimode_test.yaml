@@ -17,17 +17,20 @@ controller_manager:
     left_joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    left_zordi_hardware_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    left_zordi_joint_mit_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    left_zordi_software_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    left_zordi_joint_effort_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    left_zordi_grav_comp_controller:
-      type: zordi_mit_controller/ZordiMITController
+    left_zordi_joint_effort_grav_comp_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    left_zordi_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiMITRNEAController
+    left_zordi_joint_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
+
+    left_zordi_joint_effort_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
 
     left_zordi_cartesian_controller:
       type: zordi_mit_controller/ZordiCartesianController
@@ -39,17 +42,20 @@ controller_manager:
     right_joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    right_zordi_hardware_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    right_zordi_joint_mit_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    right_zordi_software_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    right_zordi_joint_effort_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    right_zordi_grav_comp_controller:
-      type: zordi_mit_controller/ZordiMITController
+    right_zordi_joint_effort_grav_comp_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    right_zordi_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiMITRNEAController
+    right_zordi_joint_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
+
+    right_zordi_joint_effort_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
 
     right_zordi_cartesian_controller:
       type: zordi_mit_controller/ZordiCartesianController
@@ -116,7 +122,7 @@ left_joint_trajectory_controller:
     openarm_left_joint6: {trajectory: 0.05, goal: 0.01}
     openarm_left_joint7: {trajectory: 0.05, goal: 0.01}
 
-left_zordi_hardware_pd_controller:
+left_zordi_joint_mit_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -139,7 +145,7 @@ left_zordi_hardware_pd_controller:
     use_gravity_compensation: true
     compute_pd_internally: false
 
-left_zordi_software_pd_controller:
+left_zordi_joint_effort_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -151,8 +157,6 @@ left_zordi_software_pd_controller:
       - openarm_left_joint7
 
     command_interfaces:
-      - position
-      - velocity
       - effort
 
     state_interfaces:
@@ -162,7 +166,7 @@ left_zordi_software_pd_controller:
     use_gravity_compensation: true
     compute_pd_internally: true
 
-left_zordi_grav_comp_controller:
+left_zordi_joint_effort_grav_comp_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -187,7 +191,7 @@ left_zordi_grav_comp_controller:
     # Use left-arm-only robot description for independent gravity computation
     robot_description_topic: "robot_description_left_arm"
 
-left_zordi_mit_rnea_controller:
+left_zordi_joint_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_left_joint1
@@ -210,6 +214,28 @@ left_zordi_mit_rnea_controller:
     gravity_comp_only: false
     use_gravity_compensation: true
     compute_pd_internally: false
+
+left_zordi_joint_effort_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_left_joint1
+      - openarm_left_joint2
+      - openarm_left_joint3
+      - openarm_left_joint4
+      - openarm_left_joint5
+      - openarm_left_joint6
+      - openarm_left_joint7
+
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: false
+    use_gravity_compensation: true
+    compute_pd_internally: true
 
 left_zordi_cartesian_controller:
   ros__parameters:
@@ -350,7 +376,7 @@ right_joint_trajectory_controller:
     openarm_right_joint6: {trajectory: 0.05, goal: 0.01}
     openarm_right_joint7: {trajectory: 0.05, goal: 0.01}
 
-right_zordi_hardware_pd_controller:
+right_zordi_joint_mit_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1
@@ -373,7 +399,7 @@ right_zordi_hardware_pd_controller:
     use_gravity_compensation: true
     compute_pd_internally: false
 
-right_zordi_software_pd_controller:
+right_zordi_joint_effort_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1
@@ -385,8 +411,6 @@ right_zordi_software_pd_controller:
       - openarm_right_joint7
 
     command_interfaces:
-      - position
-      - velocity
       - effort
 
     state_interfaces:
@@ -396,7 +420,7 @@ right_zordi_software_pd_controller:
     use_gravity_compensation: true
     compute_pd_internally: true
 
-right_zordi_grav_comp_controller:
+right_zordi_joint_effort_grav_comp_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1
@@ -421,7 +445,7 @@ right_zordi_grav_comp_controller:
     # Use right-arm-only robot description for independent gravity computation
     robot_description_topic: "robot_description"
 
-right_zordi_mit_rnea_controller:
+right_zordi_joint_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_right_joint1
@@ -444,6 +468,28 @@ right_zordi_mit_rnea_controller:
     gravity_comp_only: false
     use_gravity_compensation: true
     compute_pd_internally: false
+
+right_zordi_joint_effort_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_right_joint1
+      - openarm_right_joint2
+      - openarm_right_joint3
+      - openarm_right_joint4
+      - openarm_right_joint5
+      - openarm_right_joint6
+      - openarm_right_joint7
+
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    gravity_comp_only: false
+    use_gravity_compensation: true
+    compute_pd_internally: true
 
 right_zordi_cartesian_controller:
   ros__parameters:

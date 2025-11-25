@@ -19,8 +19,8 @@ controller_manager:
     effort_controller:
       type: effort_controllers/JointGroupEffortController
 
-    zordi_mit_controller:
-      type: zordi_mit_controller/ZordiMITController
+    zordi_joint_mit_controller:
+      type: zordi_mit_controller/ZordiJointController
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -89,10 +89,10 @@ effort_controller:
 
     interface_name: effort
 
-# Zordi MIT Controller
+# Zordi Joint MIT Controller
 # Generic trajectory controller with configurable interfaces
 # Hardware plugin applies PID gains (from URDF) + effort feedforward
-zordi_mit_controller:
+zordi_joint_mit_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -137,6 +137,6 @@ zordi_mit_controller:
 #    # Triggers: MIT mode (Kp=0, Kd=0, only effort term active)
 #
 # 4. Full MIT mode (position + velocity + effort):
-#    ros2 control switch_controllers --activate zordi_mit_controller
+#    ros2 control switch_controllers --activate zordi_joint_mit_controller
 #    # Claims all three interfaces, triggers MIT mode
-#    # Send trajectories to: /zordi_mit_controller/follow_joint_trajectory
+#    # Send trajectories to: /zordi_joint_mit_controller/follow_joint_trajectory

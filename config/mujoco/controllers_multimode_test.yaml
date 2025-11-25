@@ -4,9 +4,9 @@
 #
 # This configuration loads multiple controllers for comprehensive testing:
 # 1. joint_trajectory_controller - Standard position+velocity control
-# 2. zordi_hardware_pd_controller - Hardware PD (pos+vel+eff, PD in hardware)
-# 3. zordi_software_pd_controller - Software PD (eff only, PD in controller)
-# 4. zordi_grav_comp_controller - Pure gravity compensation (backdrivable)
+# 2. zordi_joint_mit_controller - MIT mode (pos+vel+eff, PD in hardware)
+# 3. zordi_joint_effort_controller - Effort-only mode (eff only, PD in controller)
+# 4. zordi_joint_effort_grav_comp_controller - Pure gravity compensation (backdrivable)
 
 controller_manager:
   ros__parameters:
@@ -20,21 +20,25 @@ controller_manager:
     joint_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    # Hardware PD mode - Uses hardware MIT mode (MuJoCo or DAMIAO)
-    zordi_hardware_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    # MIT mode - Uses hardware PD (MuJoCo or DAMIAO)
+    zordi_joint_mit_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    # Software PD mode - Computes PD internally
-    zordi_software_pd_controller:
-      type: zordi_mit_controller/ZordiMITController
+    # Effort-only mode - Computes PD internally
+    zordi_joint_effort_controller:
+      type: zordi_mit_controller/ZordiJointController
 
     # Pure gravity compensation - Backdrivable operation
-    zordi_grav_comp_controller:
-      type: zordi_mit_controller/ZordiMITController
+    zordi_joint_effort_grav_comp_controller:
+      type: zordi_mit_controller/ZordiJointController
 
-    # RNEA controller - Full inverse dynamics with cubic splines
-    zordi_mit_rnea_controller:
-      type: zordi_mit_controller/ZordiMITRNEAController
+    # RNEA controller (MIT mode) - Full inverse dynamics with cubic splines
+    zordi_joint_mit_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
+
+    # RNEA controller (Effort-only mode) - Full inverse dynamics, effort interface only
+    zordi_joint_effort_rnea_controller:
+      type: zordi_mit_controller/ZordiJointRNEAController
 
     # Cartesian impedance controller (basic)
     zordi_cartesian_controller:
@@ -43,6 +47,10 @@ controller_manager:
     # Cartesian controller with RNEA (advanced)
     zordi_cartesian_rnea_controller:
       type: zordi_mit_controller/ZordiCartesianRNEAController
+
+    # Cartesian IK controller (outputs to JTC)
+    zordi_cartesian_ik_controller:
+      type: zordi_mit_controller/ZordiCartesianIKController
 
 # Joint state broadcaster configuration
 joint_state_broadcaster:
@@ -97,13 +105,12 @@ joint_trajectory_controller:
     openarm_joint6: {trajectory: 0.05, goal: 0.01}
     openarm_joint7: {trajectory: 0.05, goal: 0.01}
 
-# Hardware PD Controller
+# MIT Mode Controller
 # Uses ALL THREE interfaces: position + velocity + effort
 # Triggers MIT mode in hardware (mujoco_system.cpp):
-#   - Position/velocity actuators neutralized
 #   - Torque actuator receives: τ = Kp*(q_cmd - q) + Kd*(qd_cmd - qd) + τ_ff
 #   - PD gains from URDF, gravity comp from controller
-zordi_hardware_pd_controller:
+zordi_joint_mit_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -114,7 +121,7 @@ zordi_hardware_pd_controller:
       - openarm_joint6
       - openarm_joint7
 
-    # Hardware PD mode: Claims all three interfaces
+    # MIT mode: Claims all three interfaces
     command_interfaces:
       - position  # Hardware: Adds Kp*(pos_cmd - pos)
       - velocity  # Hardware: Adds Kd*(vel_cmd - vel)
@@ -127,13 +134,13 @@ zordi_hardware_pd_controller:
     # Gravity compensation enabled (computed by controller)
     use_gravity_compensation: true
 
-    # Hardware PD mode (default): Let hardware/MuJoCo compute PD
+    # MIT mode: Let hardware/MuJoCo compute PD
     compute_pd_internally: false
 
-# Software PD Controller
-# Computes PD in software and neutralizes hardware PD
-# Useful for pure torque-controlled robots (non-MIT hardware)
-zordi_software_pd_controller:
+# Effort-only Controller
+# Computes PD in software, claims only effort interface
+# Use for pure torque-controlled robots (non-MIT hardware)
+zordi_joint_effort_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -144,10 +151,9 @@ zordi_software_pd_controller:
       - openarm_joint6
       - openarm_joint7
 
-    # For now, uses same mode as hardware PD
+    # Effort-only mode: Claims only effort interface
+    # Hardware auto-neutralizes unclaimed position/velocity interfaces
     command_interfaces:
-      - position
-      - velocity
       - effort
 
     state_interfaces:
@@ -157,16 +163,14 @@ zordi_software_pd_controller:
     # Gravity compensation enabled
     use_gravity_compensation: true
 
-    # Software PD mode: Compute PD in controller, neutralize hardware PD
-    # Set to true for pure torque-controlled robots
-    # Set to false for MIT-capable hardware (DAMIAO, MuJoCo)
+    # Effort-only mode: Compute PD in controller
     compute_pd_internally: true
 
-# Gravity Compensation Controller
+# Gravity Compensation Controller (Effort-only)
 # Uses EFFORT interface only
 # Outputs ONLY gravity compensation torques (no PD control)
 # Fully backdrivable - robot can be moved by hand
-zordi_grav_comp_controller:
+zordi_joint_effort_grav_comp_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -194,12 +198,12 @@ zordi_grav_comp_controller:
 
     # No action interface needed (no trajectory tracking)
 
-# RNEA Controller (Full Inverse Dynamics)
+# RNEA Controller (Full Inverse Dynamics, MIT mode)
 # Uses ALL THREE interfaces: position + velocity + effort
 # Computes full inverse dynamics: τ = M(q)*qdd + C(q,qd) + g(q)
 # Uses cubic Hermite splines for smooth trajectory interpolation
 # Provides acceleration feedforward for superior tracking
-zordi_mit_rnea_controller:
+zordi_joint_mit_rnea_controller:
   ros__parameters:
     joints:
       - openarm_joint1
@@ -227,6 +231,37 @@ zordi_mit_rnea_controller:
     # Hardware PD mode: Let hardware/MuJoCo compute PD feedback
     # RNEA provides feedforward, hardware provides feedback
     compute_pd_internally: false
+
+# RNEA Controller (Full Inverse Dynamics, Effort-only mode)
+# Uses EFFORT interface only
+# Computes full inverse dynamics: τ = M(q)*qdd + C(q,qd) + g(q)
+# Uses acceleration-based control: qdd = Kp_acc*(q_des - q) + Kd_acc*(qd_des - qd)
+# Note: M(q)*qdd term provides inertia-scaled PD response
+zordi_joint_effort_rnea_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Effort-only mode: Claims only effort interface
+    command_interfaces:
+      - effort
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Full inverse dynamics (not just gravity)
+    gravity_comp_only: false
+    use_gravity_compensation: true
+
+    # Effort-only mode
+    compute_pd_internally: true
 
 # Zordi Cartesian Controller
 zordi_cartesian_controller:
@@ -330,27 +365,69 @@ zordi_cartesian_rnea_controller:
     max_cartesian_velocity: 1.0
     max_cartesian_acceleration: 5.0
 
+# Zordi Cartesian IK Controller
+# Converts Cartesian waypoints to joint trajectories via IK
+# Outputs to joint_trajectory_controller
+zordi_cartesian_ik_controller:
+  ros__parameters:
+    joints:
+      - openarm_joint1
+      - openarm_joint2
+      - openarm_joint3
+      - openarm_joint4
+      - openarm_joint5
+      - openarm_joint6
+      - openarm_joint7
+
+    # Frame configuration
+    end_effector_frame: "openarm_link7"
+    base_frame: "openarm_link0"
+
+    # Target joint_trajectory_controller to send computed trajectories
+    target_controller: "joint_trajectory_controller"
+
+    # IK solver parameters
+    ik:
+      max_iterations: 100
+      tolerance: 0.0001
+      damping: 0.001
+      step_size: 1.0
+
+    # Nullspace optimization for redundant arm
+    nullspace:
+      enabled: true
+      gain: 0.5
+      preferred_config: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    # Joint limits
+    joint_limits:
+      margin: 0.05
+      use_urdf_limits: true
+
+    # Default timing
+    default_waypoint_duration: 2.0
+
 # Usage Notes:
 #
 # 1. Joint Trajectory Controller (Standard Control):
 #    ros2 control set_controller_state joint_trajectory_controller active
 #    ros2 topic pub --once /joint_trajectory_controller/joint_trajectory ...
 #
-# 2. Hardware PD Controller (MIT Mode in Hardware):
-#    ros2 control set_controller_state zordi_hardware_pd_controller active
-#    ros2 action send_goal /zordi_hardware_pd_controller/follow_joint_trajectory ...
+# 2. MIT Mode Controller (Hardware PD):
+#    ros2 control set_controller_state zordi_joint_mit_controller active
+#    ros2 action send_goal /zordi_joint_mit_controller/follow_joint_trajectory ...
 #
-# 3. Software PD Controller (PD in Controller):
-#    ros2 control set_controller_state zordi_software_pd_controller active
-#    ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory ...
+# 3. Effort-only Controller (Software PD):
+#    ros2 control set_controller_state zordi_joint_effort_controller active
+#    ros2 action send_goal /zordi_joint_effort_controller/follow_joint_trajectory ...
 #
 # 4. Gravity Compensation Controller (Backdrivable):
-#    ros2 control set_controller_state zordi_grav_comp_controller active
+#    ros2 control set_controller_state zordi_joint_effort_grav_comp_controller active
 #    # No trajectories - just holds with gravity comp, fully backdrivable
 #
-# 5. RNEA Controller (Full Inverse Dynamics):
-#    ros2 control set_controller_state zordi_mit_rnea_controller active
-#    ros2 action send_goal /zordi_mit_rnea_controller/follow_joint_trajectory ...
+# 5. RNEA Controller (Full Inverse Dynamics, MIT mode):
+#    ros2 control set_controller_state zordi_joint_mit_rnea_controller active
+#    ros2 action send_goal /zordi_joint_mit_rnea_controller/follow_joint_trajectory ...
 #    # Best tracking performance with acceleration feedforward
 #
 # 6. Cartesian Controller (Cartesian Impedance):
@@ -361,9 +438,20 @@ zordi_cartesian_rnea_controller:
 #    ros2 control set_controller_state zordi_cartesian_rnea_controller active
 #    ros2 topic pub --once /zordi_cartesian_rnea_controller/target_pose ...
 #
+# 8. Cartesian IK Controller (IK to JTC):
+#    # First activate joint_trajectory_controller
+#    ros2 control set_controller_state joint_trajectory_controller active
+#    # Then activate IK controller
+#    ros2 control set_controller_state zordi_cartesian_ik_controller active
+#    # Send Cartesian waypoints (IK computed, sent to JTC)
+#    ros2 topic pub --once /zordi_cartesian_ik_controller/target_pose \
+#      geometry_msgs/msg/PoseStamped "{...}"
+#    ros2 topic pub --once /zordi_cartesian_ik_controller/cartesian_trajectory \
+#      moveit_msgs/msg/CartesianTrajectory "{...}"
+#
 # Controller Switching:
 #    ros2 service call /controller_manager/switch_controller \
 #      controller_manager_msgs/srv/SwitchController \
-#      "{activate_controllers: ['zordi_software_pd_controller'],
-#        deactivate_controllers: ['zordi_hardware_pd_controller'],
+#      "{activate_controllers: ['zordi_joint_effort_controller'],
+#        deactivate_controllers: ['zordi_joint_mit_controller'],
 #        strictness: 2}"
