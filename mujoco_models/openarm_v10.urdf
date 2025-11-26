@@ -311,8 +311,8 @@
     </joint>
     <joint name="openarm_joint5">
       <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">50.0</param>
-      <param name="kd">5.0</param>
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
@@ -330,8 +330,8 @@
     </joint>
     <joint name="openarm_joint6">
       <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">50.0</param>
-      <param name="kd">5.0</param>
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
@@ -349,8 +349,8 @@
     </joint>
     <joint name="openarm_joint7">
       <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">50.0</param>
-      <param name="kd">5.0</param>
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>

@@ -23,9 +23,10 @@ import argparse
 import math
 from pathlib import Path
 
-import mujoco
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
+
+import mujoco
 
 
 def quat_to_euler(quat: np.ndarray) -> tuple[float, float, float]:
@@ -107,9 +108,7 @@ def print_pose(name: str, q: list[float], pose: dict):
     """Print pose in a formatted way."""
     pos = pose["position"]
     quat = pose["orientation"]
-    euler = quat_to_euler(
-        np.array([quat["w"], quat["x"], quat["y"], quat["z"]])
-    )
+    euler = quat_to_euler(np.array([quat["w"], quat["x"], quat["y"], quat["z"]]))
 
     print(f"\n  {name}:")
     print(f"    q = [{', '.join(f'{v:.3f}' for v in q)}]")
@@ -150,7 +149,7 @@ def print_launch_format(name: str, pose: dict, time_sec: int):
 def print_trajectory_format(waypoints: list[tuple[str, list[float], dict]]):
     """Print waypoints in CartesianTrajectory format."""
     print("\n# CartesianTrajectory format:")
-    print('"{header: {frame_id: \'openarm_link0\'}, tracked_frame: \'openarm_link7\', "')
+    print("\"{header: {frame_id: 'openarm_link0'}, tracked_frame: 'openarm_link7', \"")
     print('"points: ["')
 
     for i, (name, _, pose) in enumerate(waypoints):
@@ -161,9 +160,9 @@ def print_trajectory_format(waypoints: list[tuple[str, list[float], dict]]):
         comma = "," if i < len(waypoints) - 1 else ""
         print(
             f'  "{{point: {{pose: {{position: {{x: {pos["x"]:.4f}, '
-            f'y: {pos["y"]:.4f}, z: {pos["z"]:.4f}}}, '
-            f'orientation: {{w: {quat["w"]:.4f}, x: {quat["x"]:.4f}, '
-            f'y: {quat["y"]:.4f}, z: {quat["z"]:.4f}}}}}}}, '
+            f"y: {pos['y']:.4f}, z: {pos['z']:.4f}}}, "
+            f"orientation: {{w: {quat['w']:.4f}, x: {quat['x']:.4f}, "
+            f"y: {quat['y']:.4f}, z: {quat['z']:.4f}}}}}}}, "
             f'time_from_start: {{sec: {time_sec}}}}}{comma}"'
         )
 

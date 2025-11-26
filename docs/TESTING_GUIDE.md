@@ -176,12 +176,57 @@ ros2 action send_goal /zordi_joint_effort_controller/follow_joint_trajectory \
 
 ---
 
-## Automated Test Launch Files
+## Integration Test Suite (openarm_tests)
 
-These launch files run predefined test sequences automatically. They are useful for
-quick verification and regression testing.
+The `openarm_tests` package provides comprehensive integration tests using the
+ROS2 `launch_testing` framework. These tests run automatically with pass/fail
+verification.
 
-### Available Test Launch Files
+### Running All Tests
+
+```bash
+# Build the test package
+colcon build --packages-select openarm_tests
+
+# Run all integration tests
+colcon test --packages-select openarm_tests
+
+# View detailed results
+colcon test-result --test-result-base build/openarm_tests --verbose
+```
+
+### Running Individual Tests
+
+```bash
+# Run a single test with full output
+python3 -m launch_testing.launch_test \
+    src/openarm_tests/test/test_joint_trajectory.test.py
+
+# Filter output for pass/fail summary
+python3 -m launch_testing.launch_test \
+    src/openarm_tests/test/test_joint_trajectory.test.py \
+    2>&1 | grep -E "PASS|FAIL|error"
+```
+
+### Available Integration Tests
+
+| Test File | Controller | What's Verified |
+|-----------|------------|-----------------|
+| `test_joint_trajectory.test.py` | `zordi_joint_mit_controller` | Trajectory tracking with gravity comp |
+| `test_gravity_compensation.test.py` | `zordi_joint_effort_grav_comp_controller` | Position hold against gravity |
+| `test_joint_rnea.test.py` | `zordi_joint_mit_rnea_controller` | RNEA inverse dynamics tracking |
+| `test_cartesian_control.test.py` | `zordi_cartesian_mit_controller` | Cartesian impedance control |
+| `test_cartesian_ik.test.py` | `zordi_cartesian_ik_controller` | IK + joint trajectory execution |
+| `test_cartesian_rnea.test.py` | `zordi_cartesian_effort_rnea_controller` | Cartesian RNEA control |
+
+---
+
+## Demo Launch Files (Quick Verification)
+
+These launch files run predefined test sequences with visual verification.
+Useful for quick checks and debugging.
+
+### Available Demo Launch Files
 
 | Launch File | Controller | Test Description |
 |-------------|------------|------------------|
@@ -191,7 +236,7 @@ quick verification and regression testing.
 | `test_cartesian_control.launch.py` | `zordi_cartesian_mit_controller` | Cartesian pose tracking |
 | `test_cartesian_ik.launch.py` | `zordi_cartesian_ik_controller` | Cartesian IK trajectory |
 
-### Running Automated Tests
+### Running Demo Launch Files
 
 ```bash
 # Joint trajectory tracking with MIT controller
