@@ -7,14 +7,19 @@ This test uses the OpenARM robot with zordi_cartesian_ik_controller
 which computes IK for desired Cartesian end-effector poses and generates
 joint trajectories for zordi_joint_mit_controller to execute.
 
+FK-verified waypoints (computed from stable_hanging starting position):
+  stable_hanging: q=[0,-0.785,0,1.57,0,0,0] -> EE=(0.216, -0.156, 0.311)
+  wp1: q=[0.1,-0.6,0,1.5,0,0,0]  -> EE=(0.228, -0.111, 0.349)
+  wp2: q=[-0.1,-0.7,0,1.4,0,0,0] -> EE=(0.195, -0.186, 0.351)
+  wp3: q=[0,-0.5,0.1,1.3,0,0,0]  -> EE=(0.207, -0.115, 0.409)
+
 Test sequence:
-  1. Start controller manager with OpenARM robot
+  1. Start controller manager with OpenARM robot (starts at stable_hanging)
   2. Load and activate joint_state_broadcaster, zordi_joint_mit_controller,
      zordi_cartesian_ik_controller
-  3. Reset robot to home keyframe (while paused)
-  4. Unpause simulation
-  5. Send Cartesian trajectory
-  6. Wait for trajectory completion and verify
+  3. Unpause simulation
+  4. Send sequential PoseStamped targets (FK-verified waypoints)
+  5. Verify robot executes trajectory
 
 Usage:
   ros2 launch openarm_description test_cartesian_ik.launch.py
@@ -90,18 +95,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    reset_to_home = ExecuteProcess(
-        cmd=[
-            "ros2",
-            "service",
-            "call",
-            "/mujoco_system/reset_to_keyframe",
-            "mujoco_ros2_control_msgs/srv/ResetToKeyframe",
-            "{keyframe: 'home'}",
-        ],
-        output="screen",
-    )
-
     unpause_simulation = ExecuteProcess(
         cmd=[
             "ros2",
@@ -114,42 +107,69 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Cartesian trajectory (3 waypoints, 6 seconds total)
-    send_test_trajectory = ExecuteProcess(
+    # FK-verified waypoints from stable_hanging starting position
+    # wp1: q=[0.1, -0.6, 0, 1.5, 0, 0, 0] -> EE=(0.2276, -0.1107, 0.3489)
+    send_pose_wp1 = ExecuteProcess(
         cmd=[
             "ros2",
             "topic",
             "pub",
             "--once",
-            "/zordi_cartesian_ik_controller/cartesian_trajectory",
-            "moveit_msgs/msg/CartesianTrajectory",
-            "{header: {frame_id: 'openarm_link0'}, tracked_frame: 'openarm_link7', "
-            "points: ["
-            "{point: {pose: {position: {x: 0.3, y: 0.1, z: 0.5}, "
-            "orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}}}, "
-            "time_from_start: {sec: 2}}, "
-            "{point: {pose: {position: {x: 0.3, y: -0.1, z: 0.5}, "
-            "orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}}}, "
-            "time_from_start: {sec: 4}}, "
-            "{point: {pose: {position: {x: 0.4, y: 0.0, z: 0.4}, "
-            "orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}}}, "
-            "time_from_start: {sec: 6}}"
-            "]}",
+            "/zordi_cartesian_ik_controller/target_pose",
+            "geometry_msgs/msg/PoseStamped",
+            "{header: {frame_id: 'openarm_link0'}, "
+            "pose: {position: {x: 0.2276, y: -0.1107, z: 0.3489}, "
+            "orientation: {w: 0.6881, x: 0.1834, y: 0.6612, z: 0.2361}}}",
         ],
         output="screen",
     )
 
-    # Print result message after trajectory completes
+    # wp2: q=[-0.1, -0.7, 0, 1.4, 0, 0, 0] -> EE=(0.1953, -0.1858, 0.3511)
+    send_pose_wp2 = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "topic",
+            "pub",
+            "--once",
+            "/zordi_cartesian_ik_controller/target_pose",
+            "geometry_msgs/msg/PoseStamped",
+            "{header: {frame_id: 'openarm_link0'}, "
+            "pose: {position: {x: 0.1953, y: -0.1858, z: 0.3511}, "
+            "orientation: {w: 0.7286, x: 0.2922, y: 0.5913, z: 0.1847}}}",
+        ],
+        output="screen",
+    )
+
+    # wp3: q=[0, -0.5, 0.1, 1.3, 0, 0, 0] -> EE=(0.2071, -0.1149, 0.4085)
+    send_pose_wp3 = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "topic",
+            "pub",
+            "--once",
+            "/zordi_cartesian_ik_controller/target_pose",
+            "geometry_msgs/msg/PoseStamped",
+            "{header: {frame_id: 'openarm_link0'}, "
+            "pose: {position: {x: 0.2071, y: -0.1149, z: 0.4085}, "
+            "orientation: {w: 0.7779, x: 0.1674, y: 0.5758, z: 0.1881}}}",
+        ],
+        output="screen",
+    )
+
+    # Print result message
+    # NOTE: IK convergence issues with OpenARM need investigation
+    # The IK solver fails even for small movements (~8cm)
+    # This may be due to: kinematic chain mismatch, singularity, or IK params
     print_result = ExecuteProcess(
         cmd=[
             "bash",
             "-c",
             "echo '\\n============================================' && "
-            "echo '  TEST PASSED: Cartesian IK Controller' && "
+            "echo '  TEST: Cartesian IK Controller' && "
             "echo '============================================' && "
-            "echo '  Cartesian trajectory sent successfully.' && "
-            "echo '  IK computed joint trajectory and MIT controller executed it.' && "
-            "echo '  Final EE target: (0.4, 0.0, 0.4)' && "
+            "echo '  Sent 3 FK-verified PoseStamped targets.' && "
+            "echo '  NOTE: Check logs for IK convergence status.' && "
+            "echo '  If IK errors appear, OpenARM IK needs tuning.' && "
             "echo '============================================\\n'",
         ],
         output="screen",
@@ -164,6 +184,7 @@ def generate_launch_description():
         robot_state_pub_node,
         load_joint_state_broadcaster,
         load_mit_controller,
+        # Chain: MIT loads -> IK loads -> unpause -> poses -> result
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=load_mit_controller,
@@ -173,25 +194,35 @@ def generate_launch_description():
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=load_ik_controller,
-                on_exit=[TimerAction(period=1.0, actions=[reset_to_home])],
+                on_exit=[TimerAction(period=1.0, actions=[unpause_simulation])],
             )
         ),
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=reset_to_home,
-                on_exit=[TimerAction(period=0.5, actions=[unpause_simulation])],
-            )
-        ),
+        # After unpause, wait for robot to settle then send wp1
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=unpause_simulation,
-                on_exit=[TimerAction(period=1.0, actions=[send_test_trajectory])],
+                on_exit=[TimerAction(period=2.0, actions=[send_pose_wp1])],
             )
         ),
+        # After wp1, wait and send wp2
         RegisterEventHandler(
             event_handler=OnProcessExit(
-                target_action=send_test_trajectory,
-                on_exit=[TimerAction(period=8.0, actions=[print_result])],
+                target_action=send_pose_wp1,
+                on_exit=[TimerAction(period=3.0, actions=[send_pose_wp2])],
+            )
+        ),
+        # After wp2, wait and send wp3
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=send_pose_wp2,
+                on_exit=[TimerAction(period=3.0, actions=[send_pose_wp3])],
+            )
+        ),
+        # After wp3, wait and print result
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=send_pose_wp3,
+                on_exit=[TimerAction(period=3.0, actions=[print_result])],
             )
         ),
         RegisterEventHandler(
