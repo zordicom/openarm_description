@@ -30,7 +30,7 @@
     <geom name="ground" type="plane" pos="0 0 0" size="100 100 0.001" quat="1 0 0 0" material="matplane" condim="3" conaffinity="0" />
     <camera name="fixed" pos="0 -3.0 0.5322429922452805" xyaxes="1 0 0 0 0 1" />
     <camera name="track" mode="trackcom" pos="0 -3.0 0.5322429922452805" xyaxes="1 0 0 0 0 1" />
-    <body name="root" pos="0 0 0.03224299224528053" quat="1 0 0 0">
+    <body name="root" pos="0 0 0" quat="1 0 0 0">
       <site name="imu" size="0.01" pos="0 0 0" />
       <geom name="openarm_link0_collision" type="mesh" mesh="link0_symp" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
       <geom type="mesh" rgba="" mesh="link0_symp" />
@@ -109,8 +109,7 @@
     <motor name="act_tau_openarm_joint7" joint="openarm_joint7" ctrlrange="-50 50" forcerange="-50 50" />
   </actuator>
   <keyframe>
-    <key name="stable_hanging" qpos="0.0 -0.785 0.0 1.57 0.0 0.0 0.0" />
-    <key name="canonical" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
+    <!-- home is first keyframe (default starting position) -->
     <key name="home" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
     <key name="pose1" qpos="1.0 1.5 -1.0 2.0 1.0 -1.5 1.5" />
     <key name="pose2" qpos="-1.0 -1.5 1.0 -2.0 -1.0 1.5 -1.5" />
