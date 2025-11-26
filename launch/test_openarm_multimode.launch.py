@@ -7,10 +7,10 @@ This launch file:
 1. Loads OpenARM with MuJoCo simulation
 2. Loads multiple controllers (all inactive initially):
    - joint_trajectory_controller (standard position+velocity control)
-   - zordi_hardware_pd_controller (Hardware PD mode, MIT mode)
-   - zordi_software_pd_controller (Software PD mode, effort only)
-   - zordi_grav_comp_controller (Pure gravity compensation, backdrivable)
-   - zordi_mit_rnea_controller (Full inverse dynamics with cubic splines)
+   - zordi_joint_mit_controller (Hardware PD mode, MIT mode)
+   - zordi_joint_effort_controller (Software PD mode, effort only)
+   - zordi_joint_effort_grav_comp_controller (Pure gravity compensation, backdrivable)
+   - zordi_joint_mit_rnea_controller (Full inverse dynamics with cubic splines)
    - zordi_cartesian_mit_controller (Cartesian impedance control with nullspace)
    - zordi_cartesian_mit_rnea_controller (Advanced Cartesian with RNEA)
 3. Enables MuJoCo viewer for visualization
@@ -29,7 +29,7 @@ Usage:
     ros2 control list_controllers
 
     # Activate a controller (joint space)
-    ros2 control set_controller_state zordi_software_pd_controller active
+    ros2 control set_controller_state zordi_joint_effort_controller active
 
     # Activate a controller (Cartesian space)
     ros2 control set_controller_state zordi_cartesian_mit_controller active
@@ -37,10 +37,10 @@ Usage:
 Available Controllers:
     Joint Space:
     - joint_trajectory_controller: Standard ROS2 (pos+vel)
-    - zordi_hardware_pd_controller: Hardware PD (pos+vel+eff, MIT mode)
-    - zordi_software_pd_controller: Software PD (eff only, PD in controller)
-    - zordi_grav_comp_controller: Gravity comp only (backdrivable)
-    - zordi_mit_rnea_controller: Full inverse dynamics with cubic splines
+    - zordi_joint_mit_controller: Hardware PD (pos+vel+eff, MIT mode)
+    - zordi_joint_effort_controller: Software PD (eff only, PD in controller)
+    - zordi_joint_effort_grav_comp_controller: Gravity comp only (backdrivable)
+    - zordi_joint_mit_rnea_controller: Full inverse dynamics with cubic splines
 
     Cartesian Space (7-DOF features):
     - zordi_cartesian_mit_controller: Cartesian impedance with nullspace control
@@ -96,7 +96,7 @@ def generate_launch_description():
     )
 
     # Read URDF directly (like planar 2-DoF pattern)
-    robot_description = Path(urdf_file).read_text()
+    robot_description = Path(urdf_file).read_text(encoding="utf-8")
 
     # Robot state publisher (required for gravity compensation)
     # Controllers fetch robot_description from this node to initialize Pinocchio
@@ -124,14 +124,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Joint state broadcaster (start immediately)
-    spawn_joint_broadcaster = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster"],
-        output="screen",
-    )
-
     # Load joint_trajectory_controller (inactive)
     load_jtc = Node(
         package="controller_manager",
@@ -140,35 +132,35 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Load zordi_hardware_pd_controller (inactive)
-    load_hw_pd = Node(
+    # Load zordi_joint_mit_controller (inactive)
+    load_mit = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["zordi_hardware_pd_controller", "--inactive"],
+        arguments=["zordi_joint_mit_controller", "--inactive"],
         output="screen",
     )
 
-    # Load zordi_software_pd_controller (inactive)
-    load_sw_pd = Node(
+    # Load zordi_joint_effort_controller (inactive)
+    load_effort = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["zordi_software_pd_controller", "--inactive"],
+        arguments=["zordi_joint_effort_controller", "--inactive"],
         output="screen",
     )
 
-    # Load zordi_grav_comp_controller (inactive)
+    # Load zordi_joint_effort_grav_comp_controller (inactive)
     load_grav_comp = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["zordi_grav_comp_controller", "--inactive"],
+        arguments=["zordi_joint_effort_grav_comp_controller", "--inactive"],
         output="screen",
     )
 
-    # Load zordi_mit_rnea_controller (inactive)
+    # Load zordi_joint_mit_rnea_controller (inactive)
     load_rnea = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["zordi_mit_rnea_controller", "--inactive"],
+        arguments=["zordi_joint_mit_rnea_controller", "--inactive"],
         output="screen",
     )
 
@@ -219,11 +211,11 @@ def generate_launch_description():
             event_handler=OnProcessStart(
                 target_action=mujoco_node,
                 on_start=[
-                    # Load only cartesian controller for now
+                    # Load all controllers (inactive)
                     load_joint_state_broadcaster,
                     load_jtc,
-                    load_hw_pd,
-                    load_sw_pd,
+                    load_mit,
+                    load_effort,
                     load_grav_comp,
                     load_rnea,
                     load_cartesian,

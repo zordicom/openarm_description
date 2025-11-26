@@ -29,9 +29,10 @@ Quick-start guide for testing the OpenARM 7-DOF robot with gravity compensation 
 | Controller | Package | Interfaces | Behavior | Use Case |
 |-----------|---------|-----------|----------|----------|
 | **joint_trajectory_controller** | ros2_controllers (ROS2 standard) | pos + vel | Zero oscillation, no gravity comp | Standard trajectory execution |
-| **zordi_hardware_pd_controller** | zordi_ros_controllers | pos + vel + eff | MIT mode in hardware, ~0.5s settling | Hardware-like simulation with gravity comp |
-| **zordi_software_pd_controller** | zordi_ros_controllers | pos + vel + eff | Same as HW PD (SW PD not yet implemented) | Future: internal PD computation |
-| **zordi_grav_comp_controller** | zordi_ros_controllers | eff only | Backdrivable, slow drift | Pure gravity compensation testing |
+| **zordi_joint_mit_controller** | zordi_ros_controllers | pos + vel + eff | MIT mode in hardware, ~0.5s settling | Hardware-like simulation with gravity comp |
+| **zordi_joint_effort_controller** | zordi_ros_controllers | eff only | Software PD with gravity comp | Pure torque-controlled robots |
+| **zordi_joint_effort_grav_comp_controller** | zordi_ros_controllers | eff only | Backdrivable, slow drift | Pure gravity compensation testing |
+| **zordi_joint_mit_rnea_controller** | zordi_ros_controllers | pos + vel + eff | Full inverse dynamics with cubic splines | Superior tracking performance |
 
 ---
 
@@ -96,11 +97,11 @@ ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyfram
 
 **Expected:** Robot starts at pose1 `[1.0, 1.5, -1.0, 2.0, 1.0, -1.5, 1.5]`
 
-**Activate hardware PD:**
+**Activate gravity compensation:**
 
 ```bash
 # Terminal 2
-ros2 control set_controller_state zordi_grav_comp_controller active
+ros2 control set_controller_state zordi_joint_effort_grav_comp_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
@@ -120,21 +121,21 @@ ros2 topic echo /joint_states --once
 
 ---
 
-### Test 3: Trajectory Tracking with Software PD Controller
+### Test 3: Trajectory Tracking with Effort Controller
 
-**Activate software PD:**
+**Activate effort controller:**
 
 ```bash
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'pause'}"
-ros2 control set_controller_state zordi_hardware_pd_controller inactive
-ros2 control set_controller_state zordi_software_pd_controller active
+ros2 control set_controller_state zordi_joint_mit_controller inactive
+ros2 control set_controller_state zordi_joint_effort_controller active
 ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Send trajectory via action:**
 
 ```bash
-ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
+ros2 action send_goal /zordi_joint_effort_controller/follow_joint_trajectory \
   control_msgs/action/FollowJointTrajectory "{
     trajectory: {
       joint_names: [openarm_joint1, openarm_joint2, openarm_joint3,
@@ -158,7 +159,7 @@ ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
 **Multi-point trajectory:**
 
 ```bash
-ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
+ros2 action send_goal /zordi_joint_effort_controller/follow_joint_trajectory \
   control_msgs/action/FollowJointTrajectory "{
     trajectory: {
       joint_names: [openarm_joint1, openarm_joint2, openarm_joint3,
@@ -172,6 +173,60 @@ ros2 action send_goal /zordi_software_pd_controller/follow_joint_trajectory \
     }
   }" --feedback
 ```
+
+---
+
+## Automated Test Launch Files
+
+These launch files run predefined test sequences automatically. They are useful for
+quick verification and regression testing.
+
+### Available Test Launch Files
+
+| Launch File | Controller | Test Description |
+|-------------|------------|------------------|
+| `test_joint_trajectory.launch.py` | `zordi_joint_mit_controller` | Trajectory tracking: home -> pose1 -> home |
+| `test_gravity_compensation.launch.py` | `zordi_joint_effort_grav_comp_controller` | Position hold at pose1 with gravity comp |
+| `test_joint_rnea.launch.py` | `zordi_joint_mit_rnea_controller` | RNEA trajectory tracking: home -> pose1 -> home |
+| `test_cartesian_control.launch.py` | `zordi_cartesian_mit_controller` | Cartesian pose tracking |
+| `test_cartesian_ik.launch.py` | `zordi_cartesian_ik_controller` | Cartesian IK trajectory |
+
+### Running Automated Tests
+
+```bash
+# Joint trajectory tracking with MIT controller
+ros2 launch openarm_description test_joint_trajectory.launch.py
+
+# Gravity compensation hold test
+ros2 launch openarm_description test_gravity_compensation.launch.py
+
+# RNEA controller trajectory tracking
+ros2 launch openarm_description test_joint_rnea.launch.py
+
+# Cartesian impedance control
+ros2 launch openarm_description test_cartesian_control.launch.py
+
+# Cartesian IK controller
+ros2 launch openarm_description test_cartesian_ik.launch.py
+```
+
+### Expected Results
+
+**Joint Trajectory Tests:**
+
+- Robot moves smoothly from home to pose1 and back
+- No oscillation during trajectory execution
+- Stable hold at final position
+
+**Gravity Compensation Test:**
+
+- Robot holds pose1 with minimal drift
+- Gravity compensation torques visible in `/joint_states`
+
+**Cartesian Tests:**
+
+- End-effector reaches target Cartesian pose
+- Smooth trajectory in Cartesian space
 
 ---
 
@@ -209,20 +264,20 @@ ros2 service call /mujoco_ros2_control/reset_to_keyframe \
 # Launch at pose1
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
 
-# Start with HW PD
-ros2 control set_controller_state zordi_hardware_pd_controller active
+# Start with MIT controller
+ros2 control set_controller_state zordi_joint_mit_controller active
 
 # Wait for settling...
 
 # Switch to gravity comp
-ros2 control set_controller_state zordi_hardware_pd_controller inactive
-ros2 control set_controller_state zordi_grav_comp_controller active
+ros2 control set_controller_state zordi_joint_mit_controller inactive
+ros2 control set_controller_state zordi_joint_effort_grav_comp_controller active
 
 # Watch it drift slowly (expected!)
 
-# Switch back to HW PD
-ros2 control set_controller_state zordi_grav_comp_controller inactive
-ros2 control set_controller_state zordi_hardware_pd_controller active
+# Switch back to MIT
+ros2 control set_controller_state zordi_joint_effort_grav_comp_controller inactive
+ros2 control set_controller_state zordi_joint_mit_controller active
 
 # Now holds at wherever it drifted to
 ```
@@ -233,8 +288,8 @@ ros2 control set_controller_state zordi_hardware_pd_controller active
 # Launch at pose1
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
 
-# Activate HW PD
-ros2 control set_controller_state zordi_hardware_pd_controller active
+# Activate MIT controller
+ros2 control set_controller_state zordi_joint_mit_controller active
 
 # Monitor effort commands (should see non-zero gravity torques)
 ros2 topic echo /joint_states | grep -A 7 "effort:"
@@ -251,9 +306,10 @@ ros2 topic echo /joint_states | grep -A 7 "effort:"
 | Controller | Settling Time | Overshoot | Steady-State Error |
 |-----------|---------------|-----------|-------------------|
 | joint_trajectory_controller | 0.0s | None | Small (gravity sag) |
-| zordi_hardware_pd_controller | ~0.5s | Slight | ~Zero (gravity comp) |
-| zordi_software_pd_controller | ~0.5s | Slight | ~Zero (gravity comp) |
-| zordi_grav_comp_controller | N/A | N/A | Continuous drift |
+| zordi_joint_mit_controller | ~0.5s | Slight | ~Zero (gravity comp) |
+| zordi_joint_effort_controller | ~0.5s | Slight | ~Zero (gravity comp) |
+| zordi_joint_effort_grav_comp_controller | N/A | N/A | Continuous drift |
+| zordi_joint_mit_rnea_controller | ~0.3s | Minimal | ~Zero (full dynamics) |
 
 ### System Performance
 
@@ -436,17 +492,23 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 - Slight gravity sag (no gravity comp)
 - Standard ROS2 trajectory execution
 
-✅ **zordi_hardware_pd_controller / zordi_software_pd_controller:**
+✅ **zordi_joint_mit_controller / zordi_joint_effort_controller:**
 
 - ~0.5s settling with slight overshoot (**normal for discrete-time PD!**)
 - Stable hold with gravity compensation
 - Zero gravity sag
 
-✅ **zordi_grav_comp_controller:**
+✅ **zordi_joint_effort_grav_comp_controller:**
 
 - Slow drift (expected - no position control!)
 - Fully backdrivable
 - Gravity compensated
+
+✅ **zordi_joint_mit_rnea_controller:**
+
+- Superior tracking with full inverse dynamics
+- Faster settling (~0.3s)
+- Best for high-performance applications
 
 ❌ **Problem indicators:**
 

@@ -224,20 +224,20 @@
     </joint> -->
   <ros2_control name="openarm_hardware_interface" type="system">
     <hardware>
+      <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+      <!-- MuJoCo model configuration -->
+      <param name="mujoco_model">mujoco_models/openarm_v10.xml</param>
+      <param name="mujoco_model_package">openarm_description</param>
+      <param name="mujoco_viewer">true</param>
+      <!-- Robot configuration -->
       <param name="arm_type">v10</param>
       <param name="prefix"></param>
-      <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-      <!-- No control_mode parameter - mode switches automatically based on active controller -->
     </hardware>
     <joint name="openarm_joint1">
-      <param name="position_kp">100.0</param>
-      <param name="position_kd">10.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">10.0</param>
-      <param name="velocity_kd">1.0</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -253,14 +253,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint2">
-      <param name="position_kp">100.0</param>
-      <param name="position_kd">10.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">10.0</param>
-      <param name="velocity_kd">1.0</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -276,14 +272,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint3">
-      <param name="position_kp">100.0</param>
-      <param name="position_kd">10.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">10.0</param>
-      <param name="velocity_kd">1.0</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -299,14 +291,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint4">
-      <param name="position_kp">100.0</param>
-      <param name="position_kd">10.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">10.0</param>
-      <param name="velocity_kd">1.0</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">100.0</param>
+      <param name="kd">10.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -322,14 +310,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint5">
-      <param name="position_kp">50.0</param>
-      <param name="position_kd">5.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">5.0</param>
-      <param name="velocity_kd">0.5</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">50.0</param>
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -345,14 +329,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint6">
-      <param name="position_kp">50.0</param>
-      <param name="position_kd">5.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">5.0</param>
-      <param name="velocity_kd">0.5</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">50.0</param>
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -368,14 +348,10 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint7">
-      <param name="position_kp">50.0</param>
-      <param name="position_kd">5.0</param>
-      <param name="position_ki">0.0</param>
-      <param name="velocity_kp">5.0</param>
-      <param name="velocity_kd">0.5</param>
-      <param name="velocity_ki">0.0</param>
+      <!-- PD gains: kp=stiffness, kd=damping -->
+      <param name="kp">50.0</param>
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
-      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
