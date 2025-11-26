@@ -390,15 +390,15 @@ zordi_cartesian_ik_controller:
     # IK solver parameters (tuned for reliable convergence)
     ik:
       max_iterations: 1000
-      tolerance: 0.01   # Loosened for 7-DOF arm (SE3 norm)
+      tolerance: 0.03   # Loosened for 7-DOF arm with nullspace (SE3 norm)
       damping: 0.1      # Higher damping for redundant arm stability
       step_size: 0.5    # Smaller steps for better convergence
 
     # Nullspace optimization for redundant arm
-    # DISABLED: was causing IK divergence
+    # Uses SVD-based nullspace projector (not damped pseudo-inverse)
     nullspace:
-      enabled: false
-      gain: 0.0
+      enabled: true
+      gain: 0.3
       preferred_config: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     # Joint limits
