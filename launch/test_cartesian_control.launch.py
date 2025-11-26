@@ -83,22 +83,13 @@ def generate_launch_description():
         output="screen",
     )
 
-    load_mit_controller = Node(
+    # NOTE: Don't load zordi_joint_mit_controller - it would conflict with Cartesian controller
+    # The Cartesian controller directly commands joints via inverse dynamics
+
+    load_cartesian_controller = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["zordi_joint_mit_controller", "-c", "/controller_manager"],
-        output="screen",
-    )
-
-    load_cartesian_controller = ExecuteProcess(
-        cmd=[
-            "ros2",
-            "control",
-            "load_controller",
-            "--set-state",
-            "active",
-            "zordi_cartesian_mit_controller",
-        ],
+        arguments=["zordi_cartesian_mit_controller", "-c", "/controller_manager"],
         output="screen",
     )
 
@@ -164,13 +155,8 @@ def generate_launch_description():
         controller_manager_node,
         robot_state_pub_node,
         load_joint_state_broadcaster,
-        load_mit_controller,
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=load_mit_controller,
-                on_exit=[TimerAction(period=1.0, actions=[load_cartesian_controller])],
-            )
-        ),
+        load_cartesian_controller,
+        # Chain: JSB loads -> Cartesian loads -> reset -> unpause -> send target
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=load_cartesian_controller,
