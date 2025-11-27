@@ -108,7 +108,8 @@
   <keyframe>
     <key name="stable_hanging" qpos="0.0 -0.785 0.0 1.57 0.0 0.0 0.0" />
     <key name="canonical" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
-    <key name="home" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
+    <!-- Home: elbow bent at 1.57 rad (90 degrees) -->
+    <key name="home" qpos="0.0 0.785 0.0 1.57 0.0 0.0 0.0" />
     <key name="pose1" qpos="1.0 1.5 -1.0 2.0 1.0 -0.7 1.5" />
     <key name="pose2" qpos="-1.0 -1.5 1.0 -2.0 -1.0 1.5 -1.5" />
     <key name="pose3" qpos="2.0 1.0 2.5 1.5 2.5 1.0 2.0" />
