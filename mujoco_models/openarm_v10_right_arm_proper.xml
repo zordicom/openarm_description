@@ -121,12 +121,13 @@
   </actuator>
 
   <keyframe>
+    <!-- Home: elbow bent at 1.57 rad (90 degrees) -->
     <key name="home" qpos="0.0 0.785 0.0 1.57 0.0 0.0 0.0" />
     <!-- Canonical/zero pose: all joints at zero -->
     <key name="canonical" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
-    <!-- Right arm extended: elbow extended (joint4: 1.57 -> 1.0) -->
+    <!-- Extended: elbow extended (joint4: 1.0 rad) -->
     <key name="extended" qpos="0.0 0.785 0.0 1.0 0.0 0.0 0.0" />
-    <!-- Outward pose: arm reaching outward -->
-    <key name="pose1" qpos="0.0 0.0 0.0 1.4 -0.2 0.5 0.12" />
+    <!-- Test pose for gravity compensation -->
+    <key name="pose1" qpos="1.0 1.5 -1.0 2.0 1.0 -0.7 1.5" />
   </keyframe>
 </mujoco>

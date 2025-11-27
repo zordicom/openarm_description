@@ -7,10 +7,10 @@ This launch file:
 1. Loads OpenARM Right Arm only (no hands) with MuJoCo simulation
 2. Loads multiple controllers (all inactive initially):
    - right_joint_trajectory_controller
-   - right_zordi_hardware_pd_controller
-   - right_zordi_software_pd_controller
-   - right_zordi_grav_comp_controller
-   - right_zordi_mit_rnea_controller
+   - right_zordi_joint_mit_controller
+   - right_zordi_joint_effort_controller
+   - right_zordi_joint_effort_grav_comp_controller
+   - right_zordi_joint_mit_rnea_controller
    - right_zordi_cartesian_mit_controller
    - right_zordi_cartesian_mit_rnea_controller
 
@@ -34,10 +34,10 @@ Usage:
 
 Available Controllers:
     - right_joint_trajectory_controller: Standard ROS2 (pos+vel)
-    - right_zordi_hardware_pd_controller: Hardware PD (MIT mode)
-    - right_zordi_software_pd_controller: Software PD (effort only)
-    - right_zordi_grav_comp_controller: Gravity comp only (backdrivable)
-    - right_zordi_mit_rnea_controller: Full inverse dynamics
+    - right_zordi_joint_mit_controller: Hardware PD (MIT mode)
+    - right_zordi_joint_effort_controller: Software PD (effort only)
+    - right_zordi_joint_effort_grav_comp_controller: Gravity comp only (backdrivable)
+    - right_zordi_joint_mit_rnea_controller: Full inverse dynamics
     - right_zordi_cartesian_mit_controller: Cartesian impedance with nullspace
     - right_zordi_cartesian_mit_rnea_controller: Advanced Cartesian with RNEA
 """
@@ -143,26 +143,26 @@ def generate_launch_description():
         output="screen",
     )
 
-    load_right_hw_pd = ExecuteProcess(
+    load_right_mit = ExecuteProcess(
         cmd=[
             "ros2",
             "control",
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_hardware_pd_controller",
+            "right_zordi_joint_mit_controller",
         ],
         output="screen",
     )
 
-    load_right_sw_pd = ExecuteProcess(
+    load_right_effort = ExecuteProcess(
         cmd=[
             "ros2",
             "control",
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_software_pd_controller",
+            "right_zordi_joint_effort_controller",
         ],
         output="screen",
     )
@@ -174,7 +174,7 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_grav_comp_controller",
+            "right_zordi_joint_effort_grav_comp_controller",
         ],
         output="screen",
     )
@@ -186,7 +186,7 @@ def generate_launch_description():
             "load_controller",
             "--set-state",
             "inactive",
-            "right_zordi_mit_rnea_controller",
+            "right_zordi_joint_mit_rnea_controller",
         ],
         output="screen",
     )
@@ -225,8 +225,8 @@ def generate_launch_description():
                     load_joint_state_broadcaster,
                     # Right arm controllers
                     load_right_jtc,
-                    load_right_hw_pd,
-                    load_right_sw_pd,
+                    load_right_mit,
+                    load_right_effort,
                     load_right_grav_comp,
                     load_right_rnea,
                     load_right_cartesian,

@@ -1,7 +1,7 @@
 # Cartesian Controller Quick Start - Right Arm
 
 **Status:** ✅ Ready for Testing
-**Last Updated:** November 19, 2025
+**Last Updated:** November 26, 2025
 
 ---
 
@@ -58,10 +58,10 @@ base_frame: "openarm_right_link0"
 ### Right Arm Controllers
 
 1. **right_joint_trajectory_controller** - Standard ROS2 (position+velocity)
-2. **right_zordi_grav_comp_controller** - Pure gravity compensation
-3. **right_zordi_hardware_pd_controller** - Hardware PD (MIT mode)
-4. **right_zordi_software_pd_controller** - Software PD (effort control)
-5. **right_zordi_mit_rnea_controller** - Joint trajectory tracking with RNEA feedforward (MIT mode)
+2. **right_zordi_joint_effort_grav_comp_controller** - Pure gravity compensation
+3. **right_zordi_joint_mit_controller** - Hardware PD (MIT mode)
+4. **right_zordi_joint_effort_controller** - Software PD (effort control)
+5. **right_zordi_joint_mit_rnea_controller** - Joint trajectory tracking with RNEA feedforward (MIT mode)
 6. **right_zordi_cartesian_mit_controller** - Cartesian impedance with nullspace control (MIT mode)
 7. **right_zordi_cartesian_mit_rnea_controller** - Cartesian impedance with RNEA feedforward (MIT mode)
 

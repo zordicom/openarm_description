@@ -51,7 +51,7 @@
     <parent link="openarm_link0"/>
     <child link="openarm_link1"/>
     <axis xyz="0 0 1"/>
-    <limit effort="40" lower="-1.396263" upper="3.490659" velocity="16.754666"/>
+    <limit effort="200" lower="-1.396263" upper="3.490659" velocity="16.754666"/>
   </joint>
   <link name="openarm_link2">
     <visual name="openarm_link2_visual">
@@ -78,7 +78,7 @@
     <parent link="openarm_link1"/>
     <child link="openarm_link2"/>
     <axis xyz="-1 0 0"/>
-    <limit effort="40" lower="-1.745329" upper="1.745329" velocity="16.754666"/>
+    <limit effort="200" lower="-1.745329" upper="1.745329" velocity="16.754666"/>
   </joint>
   <link name="openarm_link3">
     <visual name="openarm_link3_visual">
@@ -105,7 +105,7 @@
     <parent link="openarm_link2"/>
     <child link="openarm_link3"/>
     <axis xyz="0 0 1"/>
-    <limit effort="27" lower="-1.570796" upper="1.570796" velocity="5.445426"/>
+    <limit effort="150" lower="-1.570796" upper="1.570796" velocity="5.445426"/>
   </joint>
   <link name="openarm_link4">
     <visual name="openarm_link4_visual">
@@ -132,7 +132,7 @@
     <parent link="openarm_link3"/>
     <child link="openarm_link4"/>
     <axis xyz="0 1 0"/>
-    <limit effort="27" lower="0.0" upper="2.443461" velocity="5.445426"/>
+    <limit effort="150" lower="0.0" upper="2.443461" velocity="5.445426"/>
   </joint>
   <link name="openarm_link5">
     <visual name="openarm_link5_visual">
@@ -159,7 +159,7 @@
     <parent link="openarm_link4"/>
     <child link="openarm_link5"/>
     <axis xyz="0 0 1"/>
-    <limit effort="7" lower="-1.570796" upper="1.570796" velocity="20.943946"/>
+    <limit effort="50" lower="-1.570796" upper="1.570796" velocity="20.943946"/>
   </joint>
   <link name="openarm_link6">
     <visual name="openarm_link6_visual">
@@ -186,7 +186,7 @@
     <parent link="openarm_link5"/>
     <child link="openarm_link6"/>
     <axis xyz="1 0 0"/>
-    <limit effort="7" lower="-0.785398" upper="0.785398" velocity="20.943946"/>
+    <limit effort="50" lower="-0.785398" upper="0.785398" velocity="20.943946"/>
   </joint>
   <link name="openarm_link7">
     <visual name="openarm_link7_visual">
@@ -213,7 +213,7 @@
     <parent link="openarm_link6"/>
     <child link="openarm_link7"/>
     <axis xyz="0 -1 0"/>
-    <limit effort="7" lower="-1.570796" upper="1.570796" velocity="20.943946"/>
+    <limit effort="50" lower="-1.570796" upper="1.570796" velocity="20.943946"/>
   </joint>
   <!-- <link name="${prefix}link8"/>
 
@@ -224,20 +224,27 @@
     </joint> -->
   <ros2_control name="openarm_hardware_interface" type="system">
     <hardware>
-      <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-      <!-- MuJoCo model configuration -->
-      <param name="mujoco_model">mujoco_models/openarm_v10.xml</param>
-      <param name="mujoco_model_package">openarm_description</param>
-      <param name="mujoco_viewer">true</param>
-      <!-- Robot configuration -->
       <param name="arm_type">v10</param>
       <param name="prefix"></param>
+      <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+      <param name="mujoco_model">mujoco_models/openarm_v10.xml</param>
+      <param name="mujoco_model_package">openarm_description</param>
+      <param name="mujoco_viewer">false</param>
+      <!-- Always use "all" mode to enable dynamic controller switching -->
+      <param name="control_mode">all</param>
     </hardware>
     <joint name="openarm_joint1">
-      <!-- PD gains: kp=stiffness, kd=damping -->
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
       <param name="kp">100.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
       <param name="kd">10.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -253,10 +260,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint2">
-      <!-- PD gains: kp=stiffness, kd=damping -->
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
       <param name="kp">100.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
       <param name="kd">10.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -272,10 +286,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint3">
-      <!-- PD gains: kp=stiffness, kd=damping -->
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
       <param name="kp">100.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
       <param name="kd">10.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -291,10 +312,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint4">
-      <!-- PD gains: kp=stiffness, kd=damping -->
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
       <param name="kp">100.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
       <param name="kd">10.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -310,10 +338,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint5">
-      <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">100.0</param>
-      <param name="kd">10.0</param>
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
+      <param name="kp">50.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -329,10 +364,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint6">
-      <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">100.0</param>
-      <param name="kd">10.0</param>
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
+      <param name="kp">50.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>
@@ -348,10 +390,17 @@
       </state_interface>
     </joint>
     <joint name="openarm_joint7">
-      <!-- PD gains: kp=stiffness, kd=damping -->
-      <param name="kp">100.0</param>
-      <param name="kd">10.0</param>
+      <!-- PID parameters for both MuJoCo and real hardware -->
+      <!-- These are used by: -->
+      <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+      <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+      <!--   - real hardware interfaces (DAMIAO, etc.) -->
+      <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
+      <param name="kp">50.0</param>
+      <!-- kd acts as damping gain (Kd) in MIT mode -->
+      <param name="kd">5.0</param>
       <!-- Command Interfaces -->
+      <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
       <command_interface name="position"/>
       <command_interface name="velocity"/>
       <command_interface name="effort"/>

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <mujoco model="openarm">
-  <option iterations="50" timestep="0.001" solver="PGS" gravity="0 0 -9.81" />
+  <option iterations="50" timestep="0.001" solver="PGS" gravity="0 0 0" />
   <compiler angle="radian" eulerseq="zyx" autolimits="true" balanceinertia="true" />
   <default>
     <joint limited="true" damping="0.01" armature="0.01" frictionloss="0.01" />
@@ -30,7 +30,7 @@
     <geom name="ground" type="plane" pos="0 0 0" size="100 100 0.001" quat="1 0 0 0" material="matplane" condim="3" conaffinity="0" />
     <camera name="fixed" pos="0 -3.0 0.5322429922452805" xyaxes="1 0 0 0 0 1" />
     <camera name="track" mode="trackcom" pos="0 -3.0 0.5322429922452805" xyaxes="1 0 0 0 0 1" />
-    <body name="openarm_link0" pos="0 0 0.03224299224528053" quat="1 0 0 0">
+    <body name="root" pos="0 0 0.03224299224528053" quat="1 0 0 0">
       <site name="imu" size="0.01" pos="0 0 0" />
       <geom name="openarm_link0_collision" type="mesh" mesh="link0_symp" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
       <geom type="mesh" rgba="" mesh="link0_symp" />
@@ -109,7 +109,7 @@
     <key name="stable_hanging" qpos="0.0 -0.785 0.0 1.57 0.0 0.0 0.0" />
     <key name="canonical" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
     <key name="home" qpos="0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
-    <key name="pose1" qpos="1.0 1.5 -1.0 2.0 1.0 -0.7 1.5" />
+    <key name="pose1" qpos="1.0 1.5 -1.0 2.0 1.0 -1.5 1.5" />
     <key name="pose2" qpos="-1.0 -1.5 1.0 -2.0 -1.0 1.5 -1.5" />
     <key name="pose3" qpos="2.0 1.0 2.5 1.5 2.5 1.0 2.0" />
     <key name="pose4" qpos="-2.0 -1.0 -2.5 -1.5 -2.5 -1.0 -2.0" />
