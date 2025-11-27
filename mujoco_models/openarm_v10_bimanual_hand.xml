@@ -80,7 +80,8 @@
                   <geom name="openarm_left_link6_collision" pos="-0.0375 0 -0.5585" quat="1 0 0 0" type="mesh" mesh="link6_symp" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
                   <geom type="mesh" rgba="" mesh="link6_symp" pos="-0.0375 0 -0.5585" quat="1 0 0 0" />
                   <body name="openarm_left_link7" pos="-0.0375 0 0">
-                    <inertial pos="0.000225407 -0.0493083 0.0527505" quat="0.562309 0.826922 -0.00037379 0.00302762" mass="0.815977" diaginertia="0.00265078 0.00228138 0.000591786" />
+                    <!-- Combined link7 + hand inertia to match URDF -->
+                    <inertial pos="0.000039 -0.00637 0.0955" quat="0.562309 0.826922 -0.00037379 0.00302762" mass="0.815977" diaginertia="0.00265078 0.00228138 0.000591786" />
                     <joint name="openarm_left_joint7" pos="0 0 0" axis="0 -1 0" range="-1.5708 1.5708" actuatorfrcrange="-50 50" />
                     <geom name="openarm_left_link7_collision" pos="0 0 -0.5585" type="mesh" mesh="link7_symp" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
                     <geom type="mesh" rgba="" mesh="link7_symp" pos="0 0 -0.5585" />
@@ -136,7 +137,8 @@
                   <geom name="openarm_right_link6_collision" pos="-0.0375 0 -0.5585" quat="1 0 0 0" type="mesh" mesh="link6_symp1" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
                   <geom type="mesh" rgba="" mesh="link6_symp1" pos="-0.0375 0 -0.5585" quat="1 0 0 0" />
                   <body name="openarm_right_link7" pos="-0.0375 0 0">
-                    <inertial pos="0.000225407 -0.0348469 0.0527505" quat="0.591772 0.8061 -0.00076286 0.00279989" mass="0.815977" diaginertia="0.00364382 0.00328963 0.000576585" />
+                    <!-- Combined link7 + hand inertia to match URDF -->
+                    <inertial pos="0.000039 0.00809 0.0955" quat="0.591772 0.8061 -0.00076286 0.00279989" mass="0.815977" diaginertia="0.00364382 0.00328963 0.000576585" />
                     <joint name="openarm_right_joint7" pos="0 0 0" axis="0 1 0" range="-1.5708 1.5708" actuatorfrcrange="-50 50" />
                     <geom name="openarm_right_link7_collision" pos="0 0 -0.5585" type="mesh" mesh="link7_symp1" contype="0" conaffinity="0" density="0" group="1" class="visualgeom" />
                     <geom type="mesh" rgba="" mesh="link7_symp1" pos="0 0 -0.5585" />
