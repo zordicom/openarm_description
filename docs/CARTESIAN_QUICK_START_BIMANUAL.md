@@ -1,7 +1,7 @@
-# Cartesian Controller Quick Start - Right Arm
+# Cartesian Controller Quick Start - Right Arm (Bimanual Config)
 
 **Status:** ✅ Ready for Testing
-**Last Updated:** November 26, 2025
+**Last Updated:** November 28, 2025
 
 ---
 
@@ -17,7 +17,10 @@ This guide covers the right arm OpenARM setup (single 7-DOF arm, bimanual should
 cd /home/gilwoo/ros2_ws
 source install/setup.bash
 
-# Launch right arm system (starts from "extended" keyframe by default)
+# Launch right arm system (starts from "home" keyframe by default)
+ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py
+
+# Or specify a keyframe explicitly
 ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py initial_keyframe:="extended"
 
 # In another terminal (after sourcing):
@@ -27,9 +30,11 @@ ros2 control list_controllers
 ros2 control set_controller_state right_zordi_cartesian_mit_controller active
 ```
 
+**Note:** The launch file has `unpause: True`, so simulation starts automatically.
+
 ---
 
-## Controller Configuration Requirements ("controllers_bimanual_multimode_test.yaml")
+## Controller Configuration Requirements (`controllers_bimanual_multimode_test.yaml`)
 
 ### 1. Torque Limits Must Be Explicit
 
@@ -44,7 +49,7 @@ torque_limits: [200.0, 200.0, 150.0, 150.0, 50.0, 50.0, 50.0]
 These parameters are set in `controllers_bimanual_multimode_test.yaml` for each Cartesian controller:
 
 ```yaml
-# For right_zordi_cartesian_mit_controller (lines 466-467):
+# For right_zordi_cartesian_mit_controller:
 end_effector_frame: "openarm_right_link7"
 base_frame: "openarm_right_link0"
 
@@ -100,7 +105,7 @@ ros2 topic pub --once /right_zordi_cartesian_mit_rnea_controller/target_pose \
   }"
 ```
 
-This shuold get the joint states close to "<key name="home" qpos="0.0 0.785 0.0 1.57 0.0 0.0 0.0" />".
+This should get the joint states close to `<key name="home" qpos="0.0 0.785 0.0 1.57 0.0 0.0 0.0" />`.
 
 ### Method 2: Action-Based Control (Trajectory with Timing)
 
@@ -130,7 +135,7 @@ ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/foll
 
 ### Keyframe Cartesian Poses (All in Base Frame: openarm_right_link0)
 
-Keyframes are defined in "openarm_v10_right_arm_proper.xml"
+Keyframes are defined in `mujoco_models/openarm_v10_right_arm_proper.xml`
 
 #### **Home** (joint4 = 1.57 rad, elbow bent)
 
@@ -162,16 +167,19 @@ orientation: {x: 0.604925, y: 0.615794, z: 0.298166, w: 0.407383}
 
 ### Test Sequence: Extended → Home → Extended
 
-**Step 1: Activate Controller**
+**Step 1: Launch and Activate Controller**
 
 ```bash
-ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py  initial_keyframe:="extended"
-# or ros2 service call /reset_to_keyframe   mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'extended'}"
+# Launch with extended keyframe
+ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py initial_keyframe:="extended"
+
+# Activate the Cartesian controller
 ros2 control set_controller_state right_zordi_cartesian_mit_rnea_controller active
-ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
-**Step 2: Move to Home (from default "extended" startup)**
+**Note:** Simulation starts automatically (unpause: True in launch file).
+
+**Step 2: Move to Home (from "extended" startup)**
 
 ```bash
 ros2 action send_goal --feedback /right_zordi_cartesian_mit_rnea_controller/follow_cartesian_trajectory \
@@ -219,5 +227,48 @@ Check the joint states to confirm that it's roughly at the extended pose.
 The extended pose is defined as:
 
 ```xml
-    <key name="extended" qpos="0.0 0.785 0.0 1.0 0.0 0.0 0.0" />
+<key name="extended" qpos="0.0 0.785 0.0 1.0 0.0 0.0 0.0" />
+```
+
+---
+
+## Runtime Keyframe Reset
+
+Reset the robot to a specific keyframe during runtime:
+
+```bash
+# Reset to keyframe by name
+ros2 service call /mujoco_ros2_control/reset_to_keyframe \
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'extended'}"
+
+# Or by index (as string)
+ros2 service call /mujoco_ros2_control/reset_to_keyframe \
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: '2'}"
+```
+
+**Available keyframes in `openarm_v10_right_arm_proper.xml`:**
+
+| Index | Name | Joint Values (qpos) |
+|-------|------|---------------------|
+| 0 | home | 0.0, 0.785, 0.0, 1.57, 0.0, 0.0, 0.0 |
+| 1 | canonical | 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 |
+| 2 | extended | 0.0, 0.785, 0.0, 1.0, 0.0, 0.0, 0.0 |
+| 3 | pose1 | 1.0, 1.5, -1.0, 2.0, 1.0, -0.7, 1.5 |
+| 4 | ik_test_base | 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 |
+
+---
+
+## Simulation Control
+
+Control the simulation state if needed:
+
+```bash
+# Pause simulation
+ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl "{command: 'pause'}"
+
+# Unpause simulation
+ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl "{command: 'unpause'}"
+
+# Reset simulation
+ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl "{command: 'reset'}"
 ```

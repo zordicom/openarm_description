@@ -33,6 +33,8 @@ Quick-start guide for testing the OpenARM 7-DOF robot with gravity compensation 
 | **zordi_joint_effort_controller** | zordi_ros_controllers | eff only | Software PD with gravity comp | Pure torque-controlled robots |
 | **zordi_joint_effort_grav_comp_controller** | zordi_ros_controllers | eff only | Backdrivable, slow drift | Pure gravity compensation testing |
 | **zordi_joint_mit_rnea_controller** | zordi_ros_controllers | pos + vel + eff | Full inverse dynamics with cubic splines | Superior tracking performance |
+| **zordi_cartesian_mit_controller** | zordi_ros_controllers | pos + vel + eff | Cartesian impedance with nullspace | Cartesian pose tracking |
+| **zordi_cartesian_mit_rnea_controller** | zordi_ros_controllers | pos + vel + eff | Advanced Cartesian with RNEA | High-performance Cartesian control |
 
 ---
 
@@ -47,10 +49,8 @@ pip install mujoco urdf2mjcf
 
 # Build workspace
 cd ~/ros2_ws
-colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_ros_controllers openarm_description mujoco_ros2_control_msgs --symlink-install
+colcon build --packages-select mujoco_ros2_control mujoco_ros2_control_demos zordi_ros_controllers openarm_description mujoco_ros2_control_msgs openarm_tests --symlink-install
 source install/setup.bash
-```
-
 ```
 
 ---
@@ -60,20 +60,20 @@ source install/setup.bash
 ### Test 1: Basic Trajectory with Standard Controller
 
 **Launch:**
+
 ```bash
 cd ~/ros2_ws
 source install/setup.bash
 ros2 launch openarm_description test_openarm_multimode.launch.py
 ```
 
-**Expected:** MuJoCo viewer opens, robot at home position (all zeros)
+**Expected:** MuJoCo viewer opens, robot at home position. Simulation starts automatically (`unpause: True`).
 
 **Activate and test:**
 
 ```bash
 # Terminal 2
 ros2 control set_controller_state joint_trajectory_controller active
-ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 
 # Send trajectory
 ros2 topic pub --once /joint_trajectory_controller/joint_trajectory \
@@ -95,19 +95,19 @@ ros2 topic pub --once /joint_trajectory_controller/joint_trajectory \
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
 ```
 
-**Expected:** Robot starts at pose1 `[1.0, 1.5, -1.0, 2.0, 1.0, -1.5, 1.5]`
+**Expected:** Robot starts at pose1 `[1.0, 1.5, -1.0, 2.0, 1.0, -0.7, 1.5]`
 
 **Activate gravity compensation:**
 
 ```bash
 # Terminal 2
 ros2 control set_controller_state zordi_joint_effort_grav_comp_controller active
-ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Expected Result:**
 
-- Joint 6 rotates to -0.72; we may need to tune the gravity compensation gains.
+- Robot holds position with gravity compensation
+- Some drift may occur (this is expected for pure gravity comp mode)
 
 **Monitor:**
 
@@ -115,7 +115,7 @@ ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationCon
 # Check joint states
 ros2 topic echo /joint_states --once
 
-# Expected: positions near [1.0, 1.5, -1.0, 2.0, 1.0, -1.5, 1.5]
+# Expected: positions near [1.0, 1.5, -1.0, 2.0, 1.0, -0.7, 1.5]
 # Expected: velocities near [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 ```
 
@@ -126,10 +126,7 @@ ros2 topic echo /joint_states --once
 **Activate effort controller:**
 
 ```bash
-ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'pause'}"
-ros2 control set_controller_state zordi_joint_mit_controller inactive
 ros2 control set_controller_state zordi_joint_effort_controller active
-ros2 service call /simulation_control mujoco_ros2_control_msgs/srv/SimulationControl   "{command: 'unpause'}"
 ```
 
 **Send trajectory via action:**
@@ -200,59 +197,70 @@ colcon test-result --test-result-base build/openarm_tests --verbose
 ```bash
 # Run a single test with full output
 python3 -m launch_testing.launch_test \
-    src/openarm_tests/test/test_joint_trajectory.test.py
+    src/openarm_tests/test/test_joint_mit.test.py
 
 # Filter output for pass/fail summary
 python3 -m launch_testing.launch_test \
-    src/openarm_tests/test/test_joint_trajectory.test.py \
+    src/openarm_tests/test/test_joint_mit.test.py \
     2>&1 | grep -E "PASS|FAIL|error"
 ```
 
 ### Available Integration Tests
 
+#### Single Arm Tests
+
 | Test File | Controller | What's Verified |
 |-----------|------------|-----------------|
-| `test_joint_trajectory.test.py` | `zordi_joint_mit_controller` | Trajectory tracking with gravity comp |
-| `test_gravity_compensation.test.py` | `zordi_joint_effort_grav_comp_controller` | Position hold against gravity |
-| `test_joint_rnea.test.py` | `zordi_joint_mit_rnea_controller` | RNEA inverse dynamics tracking |
-| `test_cartesian_control.test.py` | `zordi_cartesian_mit_controller` | Cartesian impedance control |
+| `test_joint_mit.test.py` | `zordi_joint_mit_controller` | MIT mode trajectory tracking |
+| `test_joint_mit_rnea.test.py` | `zordi_joint_mit_rnea_controller` | RNEA inverse dynamics tracking |
+| `test_joint_mit_effort.test.py` | `zordi_joint_effort_controller` | Software PD trajectory tracking |
+| `test_joint_mit_effort_rnea.test.py` | `zordi_joint_effort_rnea_controller` | Software PD + RNEA |
+| `test_joint_grav_comp.test.py` | `zordi_joint_effort_grav_comp_controller` | Position hold against gravity |
+| `test_cartesian_mit.test.py` | `zordi_cartesian_mit_controller` | Cartesian impedance (MIT mode) |
+| `test_cartesian_mit_rnea.test.py` | `zordi_cartesian_mit_rnea_controller` | Cartesian MIT + RNEA |
+| `test_cartesian_mit_effort.test.py` | `zordi_cartesian_effort_controller` | Cartesian impedance (software PD) |
+| `test_cartesian_mit_effort_rnea.test.py` | `zordi_cartesian_effort_rnea_controller` | Cartesian software PD + RNEA |
 | `test_cartesian_ik.test.py` | `zordi_cartesian_ik_controller` | IK + joint trajectory execution |
-| `test_cartesian_rnea.test.py` | `zordi_cartesian_effort_rnea_controller` | Cartesian RNEA control |
+| `test_gain_safety_limits.test.py` | N/A | Tests max_kp/max_kd safety limits |
+
+#### Bimanual Tests (Right Arm)
+
+| Test File | Controller | What's Verified |
+|-----------|------------|-----------------|
+| `test_bimanual_joint_mit.test.py` | `right_zordi_joint_mit_controller` | Right arm MIT mode |
+| `test_bimanual_joint_mit_rnea.test.py` | `right_zordi_joint_mit_rnea_controller` | Right arm RNEA |
+| `test_bimanual_joint_mit_effort.test.py` | `right_zordi_joint_effort_controller` | Right arm software PD |
+| `test_bimanual_joint_mit_effort_rnea.test.py` | `right_zordi_joint_effort_rnea_controller` | Right arm software PD + RNEA |
+| `test_bimanual_joint_grav_comp.test.py` | `right_zordi_joint_effort_grav_comp_controller` | Right arm gravity comp |
+| `test_bimanual_cartesian_mit.test.py` | `right_zordi_cartesian_mit_controller` | Right arm Cartesian |
+| `test_bimanual_cartesian_mit_rnea.test.py` | `right_zordi_cartesian_mit_rnea_controller` | Right arm Cartesian + RNEA |
+| `test_bimanual_cartesian_mit_effort.test.py` | `right_zordi_cartesian_effort_controller` | Right arm Cartesian software PD |
+| `test_bimanual_cartesian_mit_effort_rnea.test.py` | `right_zordi_cartesian_effort_rnea_controller` | Right arm Cartesian software PD + RNEA |
+| `test_bimanual_cartesian_ik.test.py` | `right_zordi_cartesian_ik_controller` | Right arm Cartesian IK |
 
 ---
 
-## Demo Launch Files (Quick Verification)
+## Available Launch Files
 
-These launch files run predefined test sequences with visual verification.
-Useful for quick checks and debugging.
+| Launch File | Description |
+|-------------|-------------|
+| `test_openarm_multimode.launch.py` | Single arm with all controllers (inactive) |
+| `test_openarm_bimanual_multimode.launch.py` | Right arm (bimanual mount) with all controllers |
+| `display_openarm.launch.py` | Display robot in RViz |
+| `mujoco_with_full_viewer.launch.py` | MuJoCo with full viewer |
+| `single_arm.launch.py` | Basic single arm launch |
 
-### Available Demo Launch Files
-
-| Launch File | Controller | Test Description |
-|-------------|------------|------------------|
-| `test_joint_trajectory.launch.py` | `zordi_joint_mit_controller` | Trajectory tracking: home -> pose1 -> home |
-| `test_gravity_compensation.launch.py` | `zordi_joint_effort_grav_comp_controller` | Position hold at pose1 with gravity comp |
-| `test_joint_rnea.launch.py` | `zordi_joint_mit_rnea_controller` | RNEA trajectory tracking: home -> pose1 -> home |
-| `test_cartesian_control.launch.py` | `zordi_cartesian_mit_controller` | Cartesian pose tracking |
-| `test_cartesian_ik.launch.py` | `zordi_cartesian_ik_controller` | Cartesian IK trajectory |
-
-### Running Demo Launch Files
+### Running Launch Files
 
 ```bash
-# Joint trajectory tracking with MIT controller
-ros2 launch openarm_description test_joint_trajectory.launch.py
+# Single arm multimode (default home keyframe)
+ros2 launch openarm_description test_openarm_multimode.launch.py
 
-# Gravity compensation hold test
-ros2 launch openarm_description test_gravity_compensation.launch.py
+# Single arm with specific keyframe
+ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
 
-# RNEA controller trajectory tracking
-ros2 launch openarm_description test_joint_rnea.launch.py
-
-# Cartesian impedance control
-ros2 launch openarm_description test_cartesian_control.launch.py
-
-# Cartesian IK controller
-ros2 launch openarm_description test_cartesian_ik.launch.py
+# Right arm (bimanual config)
+ros2 launch openarm_description test_openarm_bimanual_multimode.launch.py
 ```
 
 ### Expected Results
@@ -265,7 +273,7 @@ ros2 launch openarm_description test_cartesian_ik.launch.py
 
 **Gravity Compensation Test:**
 
-- Robot holds pose1 with minimal drift
+- Robot holds pose with minimal drift
 - Gravity compensation torques visible in `/joint_states`
 
 **Cartesian Tests:**
@@ -279,28 +287,43 @@ ros2 launch openarm_description test_cartesian_ik.launch.py
 
 ### Test All Keyframes
 
+**Single arm keyframes (openarm_v10.xml):**
+
 ```bash
-# Home (all zeros)
-ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=home
-
-# Pose1 (test configuration)
-ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
-
-# Pose2 (opposite of pose1)
-ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose2
-
 # Stable hanging
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=stable_hanging
+
+# Canonical (all zeros)
+ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=canonical
+
+# Home (elbow bent)
+ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=home
+
+# Test poses
+ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose1
+ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=pose2
 ```
+
+**Available keyframes in `openarm_v10.xml`:**
+
+| Name | Joint Values (qpos) | Description |
+|------|---------------------|-------------|
+| stable_hanging | 0.0, -0.785, 0.0, 1.57, 0.0, 0.0, 0.0 | Arm hanging down |
+| canonical | 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 | All zeros |
+| home | 0.0, 0.785, 0.0, 1.57, 0.0, 0.0, 0.0 | Elbow bent at 90° |
+| pose1 | 1.0, 1.5, -1.0, 2.0, 1.0, -0.7, 1.5 | Test configuration 1 |
+| pose2 | -1.0, -1.5, 1.0, -2.0, -1.0, 1.5, -1.5 | Test configuration 2 |
 
 ### Runtime Keyframe Reset
 
 ```bash
-# While simulation is running
+# Reset to named keyframe
 ros2 service call /mujoco_ros2_control/reset_to_keyframe \
-  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe_id: 1}"
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'pose1'}"
 
-# keyframe_id: 0=home, 1=pose1, 2=pose2, 3=stable_hanging
+# Reset by index (as string)
+ros2 service call /mujoco_ros2_control/reset_to_keyframe \
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: '3'}"
 ```
 
 ### Controller Switching
@@ -418,6 +441,8 @@ python3 scripts/urdf_to_mjcf.py --output mujoco_models/openarm_v10.xml
 colcon build --packages-select openarm_description --symlink-install
 ```
 
+The script automatically reads keyframes from `config/mujoco/initial_poses.yaml` and validates joint counts!
+
 ---
 
 ## Troubleshooting
@@ -497,7 +522,7 @@ If things get messy:
 ```bash
 cd ~/ros2_ws
 rm -rf build/ install/ log/
-colcon build --packages-select openarm_description zordi_ros_controllers --symlink-install
+colcon build --packages-select openarm_description zordi_ros_controllers mujoco_ros2_control openarm_tests --symlink-install
 source install/setup.bash
 ros2 launch openarm_description test_openarm_multimode.launch.py initial_keyframe:=home
 ```
@@ -518,7 +543,7 @@ ros2 control set_controller_state <controller_name> inactive
 
 # Reset to keyframe
 ros2 service call /mujoco_ros2_control/reset_to_keyframe \
-  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe_id: 1}"
+  mujoco_ros2_control_msgs/srv/ResetToKeyframe "{keyframe: 'pose1'}"
 
 # Monitor joint states
 ros2 topic echo /joint_states
@@ -593,15 +618,17 @@ ros2 control list_controllers && ros2 topic hz /joint_states
 ### This Package (`openarm_description`)
 
 - **Technical fixes:** [KEY_FIXES_SUMMARY.md](KEY_FIXES_SUMMARY.md) - Critical bug fixes and solutions
+- **Cartesian Quick Start:** [CARTESIAN_QUICK_START_BIMANUAL.md](CARTESIAN_QUICK_START_BIMANUAL.md) - Right arm Cartesian control
 
 ### Other Packages
 
-- **MuJoCo ROS2 Control:** `mujoco_ros2_control/doc/mujoco_ros2_control_updates.md` - MIT mode architecture
+- **MuJoCo ROS2 Control:** `mujoco_ros2_control/doc/updates.md` - MIT mode architecture
 - **MuJoCo Demos:** `mujoco_ros2_control_demos/README.md` - Examples and tutorials
 - **Zordi MIT Controller:** `zordi_ros_controllers/README.md` - Controller API and configuration
+- **OpenARM Tests:** `openarm_tests/README.md` - Integration test documentation
 
 ---
 
-**Document Version:** 3.0
-**Last Updated:** November 17, 2025
+**Document Version:** 4.0
+**Last Updated:** November 28, 2025
 **Status:** ✅ Production Ready
