@@ -11,7 +11,8 @@
              hand:=^|false
              left_arm_prefix:=^|left_
              right_arm_prefix:=^|right_
-             can_fd:=^|true">
+             can_fd:=^|true
+             mujoco_viewer:=^|false">
 
     <!-- Left Arm Hardware Interface -->
     <ros2_control name="openarm_left_hardware_interface" type="system">
@@ -21,8 +22,9 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-            <!-- Always use "all" mode to enable dynamic controller switching -->
-            <param name="control_mode">all</param>
+            <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual.xml</param>
+            <param name="mujoco_model_package">openarm_description</param>
+            <param name="mujoco_viewer">${mujoco_viewer}</param>
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->
@@ -44,29 +46,31 @@
 
       <xacro:macro name="configure_joint" params="joint_name initial_position kp:=2000.0 kd:=100.0">
         <joint name="${joint_name}">
-          <!-- MuJoCo PID parameters (must be at joint level, not under command_interface)
-               Higher gains needed for proximal joints to hold against gravity -->
-          <xacro:if value="${use_mujoco}">
-            <param name="position_kp">${kp}</param>
-            <param name="position_kd">${kd}</param>
-            <param name="position_ki">0.0</param>
-            <param name="velocity_kp">${kp/10.0}</param>
-            <param name="velocity_kd">${kd/10.0}</param>
-            <param name="velocity_ki">0.0</param>
-          </xacro:if>
+          <!-- PID parameters for both MuJoCo and real hardware -->
+          <!-- These are used by: -->
+          <!--   - mujoco_system.cpp (when use_mujoco=true) -->
+          <!--   - zordi_ros_controllers software PD mode (compute_pd_internally=true) -->
+          <!--   - real hardware interfaces (DAMIAO, etc.) -->
+          <!-- CRITICAL: Must be outside conditional blocks so software PD mode always works -->
+          <param name="position_kp">${kp}</param>
+          <param name="position_kd">${kd}</param>
+          <param name="position_ki">0.0</param>
+          <!-- velocity_kp acts as damping gain (Kd) in MIT mode -->
+          <param name="velocity_kp">${kd}</param>
+          <param name="velocity_kd">0.0</param>
+          <param name="velocity_ki">0.0</param>
 
           <!-- Command Interfaces -->
-          <xacro:if value="${use_mujoco}">
-            <!-- Use _pid suffix for MuJoCo to enable PID-based control -->
-            <command_interface name="position_pid"/>
-            <command_interface name="velocity_pid"/>
-            <command_interface name="effort"/>
-          </xacro:if>
-          <xacro:unless value="${use_mujoco}">
+          <!-- ALWAYS expose standard interface names (same for real, fake, and MuJoCo) -->
           <command_interface name="position"/>
           <command_interface name="velocity"/>
           <command_interface name="effort"/>
-          </xacro:unless>
+          <!-- MIT mode: dynamic kp/kd gains sent to hardware each control cycle -->
+          <command_interface name="kp"/>
+          <command_interface name="kd"/>
+          <!-- Safety limits for MIT mode gains -->
+          <param name="max_kp">500.0</param>
+          <param name="max_kd">50.0</param>
 
           <state_interface name="position">
             <param name="initial_value">${initial_position}</param>
@@ -105,8 +109,9 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-            <!-- Always use "all" mode to enable dynamic controller switching -->
-            <param name="control_mode">all</param>
+            <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual.xml</param>
+            <param name="mujoco_model_package">openarm_description</param>
+            <param name="mujoco_viewer">${mujoco_viewer}</param>
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->

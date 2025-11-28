@@ -39,6 +39,8 @@
 
   <xacro:arg name="use_mujoco" default="false" />
 
+  <xacro:arg name="mujoco_viewer" default="false" />
+
   <xacro:arg name="fake_sensor_commands" default="false" />
 
   <xacro:arg name="bimanual" default="false" />
@@ -69,9 +71,10 @@
   right_can_interface="$(arg right_can_interface)"
   left_arm_prefix="$(arg left_arm_prefix)"
   right_arm_prefix="$(arg right_arm_prefix)"
-  use_fake_hardware="$(arg use_fake_hardware)"
-  use_mujoco="$(arg use_mujoco)"
-  fake_sensor_commands="$(arg fake_sensor_commands)"
+use_fake_hardware="$(arg use_fake_hardware)"
+use_mujoco="$(arg use_mujoco)"
+mujoco_viewer="$(arg mujoco_viewer)"
+fake_sensor_commands="$(arg fake_sensor_commands)"
   no_prefix="$(arg no_prefix)"
   arm_prefix=""
   body_prefix=""

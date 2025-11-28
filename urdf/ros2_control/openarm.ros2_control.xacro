@@ -11,7 +11,8 @@
              gazebo_effort:=^|false
              arm_prefix:=''
              bimanual:=false
-             can_fd:=^|true">
+             can_fd:=^|true
+             mujoco_viewer:=^|false">
 
     <ros2_control name="openarm_hardware_interface" type="system">
         <hardware>
@@ -21,7 +22,9 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
-            <!-- No control_mode parameter - mode switches automatically based on active controller -->
+            <param name="mujoco_model">mujoco_models/openarm_${arm_type}.xml</param>
+            <param name="mujoco_model_package">openarm_description</param>
+            <param name="mujoco_viewer">${mujoco_viewer}</param>
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->
@@ -62,6 +65,12 @@
           <command_interface name="position"/>
           <command_interface name="velocity"/>
           <command_interface name="effort"/>
+          <!-- MIT mode: dynamic kp/kd gains sent to hardware each control cycle -->
+          <command_interface name="kp"/>
+          <command_interface name="kd"/>
+          <!-- Safety limits for MIT mode gains -->
+          <param name="max_kp">500.0</param>
+          <param name="max_kd">50.0</param>
 
           <!-- State Interfaces -->
           <state_interface name="position">

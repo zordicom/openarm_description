@@ -21,6 +21,7 @@
             can_interface:=''
             use_fake_hardware:=false
             use_mujoco:=false
+            mujoco_viewer:=false
             fake_sensor_commands:=false
             no_prefix:='false'
             arm_prefix:=''
@@ -106,6 +107,7 @@
             right_can_interface="${right_can_interface}"
             use_fake_hardware="${use_fake_hardware}"
             use_mujoco="${use_mujoco}"
+            mujoco_viewer="${mujoco_viewer}"
             fake_sensor_commands="${fake_sensor_commands}"
             left_arm_prefix="${left_arm_prefix}"
             right_arm_prefix="${right_arm_prefix}"
@@ -165,6 +167,7 @@
             can_interface="${can_interface}"
             use_fake_hardware="${use_fake_hardware}"
             use_mujoco="${use_mujoco}"
+            mujoco_viewer="${mujoco_viewer}"
             fake_sensor_commands="${fake_sensor_commands}"
             hand="${hand}"
             bimanual="false"/>
