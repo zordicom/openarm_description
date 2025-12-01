@@ -22,9 +22,22 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+            <!-- Select model with or without hands based on hand parameter -->
+            <xacro:if value="${hand}">
+              <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual_hand.xml</param>
+            </xacro:if>
+            <xacro:unless value="${hand}">
             <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual.xml</param>
+            </xacro:unless>
             <param name="mujoco_model_package">openarm_description</param>
-            <param name="mujoco_viewer">${mujoco_viewer}</param>
+            <!-- Left arm is "primary" and owns the MuJoCo viewer (GLFW can only init once).
+                 Must output lowercase "true"/"false" for mujoco_ros2_control C++ plugin. -->
+            <xacro:if value="${mujoco_viewer}">
+              <param name="mujoco_viewer">true</param>
+            </xacro:if>
+            <xacro:unless value="${mujoco_viewer}">
+              <param name="mujoco_viewer">false</param>
+            </xacro:unless>
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->
@@ -109,9 +122,17 @@
           <!-- MuJoCo Physics Simulation -->
           <xacro:if value="${use_mujoco}">
             <plugin>mujoco_ros2_control/MujocoSystem</plugin>
+            <!-- Select model with or without hands based on hand parameter -->
+            <xacro:if value="${hand}">
+              <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual_hand.xml</param>
+            </xacro:if>
+            <xacro:unless value="${hand}">
             <param name="mujoco_model">mujoco_models/openarm_${arm_type}_bimanual.xml</param>
+            </xacro:unless>
             <param name="mujoco_model_package">openarm_description</param>
-            <param name="mujoco_viewer">${mujoco_viewer}</param>
+            <!-- IMPORTANT: Only ONE hardware interface can enable the viewer (GLFW limitation).
+                 The left arm is the "primary" and owns the viewer; right arm is always headless. -->
+            <param name="mujoco_viewer">false</param>
           </xacro:if>
 
           <!-- Fake Hardware (Mock Interface) -->
